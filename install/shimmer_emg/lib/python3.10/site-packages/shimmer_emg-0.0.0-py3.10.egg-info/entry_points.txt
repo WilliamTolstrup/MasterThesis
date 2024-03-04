@@ -1,0 +1,2 @@
+[console_scripts]
+emg_aq = shimmer_emg.emg_aq:main
