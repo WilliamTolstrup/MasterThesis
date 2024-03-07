@@ -3,8 +3,8 @@
 <package format="3">
   <name>shimmer_emg</name>
   <version>0.0.0</version>
-  <description>A ROS 2 package for EMG data acquisition from a Shimmer device.</description>
-  <maintainer email="william@todo.todo">william</maintainer>
+  <description>A ROS 2 package for EMG and IMU data acquisition from a Shimmer device.</description>
+  <maintainer email="wtolst19@student.aau.dk">William</maintainer>
   <license>TODO: License declaration</license>
 
   <test_depend>ament_copyright</test_depend>

@@ -1,0 +1,46 @@
+running egg_info
+creating ../../build/shimmer_emg/shimmer_emg.egg-info
+writing ../../build/shimmer_emg/shimmer_emg.egg-info/PKG-INFO
+writing dependency_links to ../../build/shimmer_emg/shimmer_emg.egg-info/dependency_links.txt
+writing entry points to ../../build/shimmer_emg/shimmer_emg.egg-info/entry_points.txt
+writing requirements to ../../build/shimmer_emg/shimmer_emg.egg-info/requires.txt
+writing top-level names to ../../build/shimmer_emg/shimmer_emg.egg-info/top_level.txt
+writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+reading manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/william/repos/control_system_ws/build/shimmer_emg/build
+creating /home/william/repos/control_system_ws/build/shimmer_emg/build/lib
+creating /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+copying shimmer_emg/plot_emg_from_csv.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+copying shimmer_emg/imu_emg_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+copying shimmer_emg/emg_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+copying shimmer_emg/__init__.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+copying shimmer_emg/imu_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+running install
+running install_lib
+creating /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/plot_emg_from_csv.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/imu_emg_aq.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/emg_aq.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/__init__.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/imu_aq.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/plot_emg_from_csv.py to plot_emg_from_csv.cpython-310.pyc
+byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/imu_emg_aq.py to imu_emg_aq.cpython-310.pyc
+byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/emg_aq.py to emg_aq.cpython-310.pyc
+byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/imu_aq.py to imu_aq.cpython-310.pyc
+running install_data
+creating /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index
+creating /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index/resource_index
+creating /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index/resource_index/packages
+copying resource/shimmer_emg -> /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index/resource_index/packages
+copying package.xml -> /home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg
+running install_egg_info
+Copying ../../build/shimmer_emg/shimmer_emg.egg-info to /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info
+running install_scripts
+Installing emg_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+Installing imu_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+Installing imu_emg_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+writing list of installed files to '/home/william/repos/control_system_ws/build/shimmer_emg/install.log'

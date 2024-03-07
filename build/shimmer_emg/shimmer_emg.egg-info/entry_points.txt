@@ -1,2 +1,4 @@
 [console_scripts]
 emg_aq = shimmer_emg.emg_aq:main
+imu_aq = shimmer_emg.imu_aq:main
+imu_emg_aq = shimmer_emg.imu_emg_aq:main

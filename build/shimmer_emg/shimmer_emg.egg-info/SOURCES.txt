@@ -11,6 +11,9 @@ setup.py
 resource/shimmer_emg
 shimmer_emg/__init__.py
 shimmer_emg/emg_aq.py
+shimmer_emg/imu_aq.py
+shimmer_emg/imu_emg_aq.py
+shimmer_emg/plot_emg_from_csv.py
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py

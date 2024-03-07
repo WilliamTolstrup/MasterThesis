@@ -13,14 +13,16 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='william',
-    maintainer_email='william@todo.todo',
-    description='TODO: Package description',
+    maintainer='William',
+    maintainer_email='wtolst19@student.aau.dk',
+    description='A ROS 2 package for EMG and IMU data acquisition from a Shimmer device.',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-        'emg_aq = shimmer_emg.emg_aq:main'
+        'emg_aq = shimmer_emg.emg_aq:main',
+        'imu_aq = shimmer_emg.imu_aq:main',
+        'imu_emg_aq = shimmer_emg.imu_emg_aq:main',
         ],
     },
 )

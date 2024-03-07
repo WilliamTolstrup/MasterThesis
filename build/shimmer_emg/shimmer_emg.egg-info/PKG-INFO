@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: shimmer_emg
 Version: 0.0.0
-Summary: TODO: Package description
-Maintainer: william
-Maintainer-email: william@todo.todo
+Summary: A ROS 2 package for EMG and IMU data acquisition from a Shimmer device.
+Maintainer: William
+Maintainer-email: wtolst19@student.aau.dk
 License: TODO: License declaration
 Requires-Dist: setuptools

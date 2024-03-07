@@ -270,6 +270,9 @@ ament_cmake_core_DIR:PATH=/opt/ros/humble/share/ament_cmake_core/cmake
 //The directory containing a CMake configuration file for ament_cmake_cppcheck.
 ament_cmake_cppcheck_DIR:PATH=/opt/ros/humble/share/ament_cmake_cppcheck/cmake
 
+//The directory containing a CMake configuration file for ament_cmake_cpplint.
+ament_cmake_cpplint_DIR:PATH=/opt/ros/humble/share/ament_cmake_cpplint/cmake
+
 //The directory containing a CMake configuration file for ament_cmake_export_definitions.
 ament_cmake_export_definitions_DIR:PATH=/opt/ros/humble/share/ament_cmake_export_definitions/cmake
 
@@ -401,6 +404,9 @@ fastrtps_cmake_module_DIR:PATH=/opt/ros/humble/share/fastrtps_cmake_module/cmake
 
 //The directory containing a CMake configuration file for python_cmake_module.
 python_cmake_module_DIR:PATH=/opt/ros/humble/share/python_cmake_module/cmake
+
+//The directory containing a CMake configuration file for rclpy.
+rclpy_DIR:PATH=/opt/ros/humble/share/rclpy/cmake
 
 //The directory containing a CMake configuration file for rcpputils.
 rcpputils_DIR:PATH=/opt/ros/humble/share/rcpputils/cmake

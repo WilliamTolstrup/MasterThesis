@@ -57,6 +57,10 @@ class Main(QtWidgets.QMainWindow):
         self.pubEmg = self.node.create_publisher(EMG, '/emg/emg', 10)
         self.pubRawEmg = self.node.create_publisher(EMG, '/emg/raw_emg', 10)
         self.pubEmgActivation = self.node.create_publisher(EMG, '/emg/emgActivation', 10)
+
+        #delete
+        self.pubPacket = self.node.create_publisher(UInt8, '/emg/packet', 10)
+
         self.node.create_subscription(Empty, '/emg/stop', self.stop_Btn, 10)
         self.node.create_subscription(UInt8, '/emg/start', self.start_Btn, 10)
         self.node.create_subscription(EMG, '/emg/activation_threshold', self.activation_threshold, 10)
@@ -141,7 +145,7 @@ class Main(QtWidgets.QMainWindow):
         self.thresholdCh2 = data.ch2
 
     
-    def addData_callbackFunc(self, value1,value2):
+    def addData_callbackFunc(self, value1,value2, packettype):
         if self.i < self.windowShift:
             self.bufferShift_ch1.append(value1)
             self.bufferShift_ch2.append(value2)
@@ -184,10 +188,14 @@ class Main(QtWidgets.QMainWindow):
             emg_act.ch2 = activation_ch2
             self.pubEmgActivation.publish(emg_act)
 
+            packetMsg = UInt8()
+            packetMsg.data = packettype
+            self.pubPacket.publish(packetMsg)
+
 
 class Communicate(QtCore.QObject):
     # A class for configuring the EMG module and reading the data from it
-    data_signal = pyqtSignal(float, float)
+    data_signal = pyqtSignal(float, float, int)
 
     def __init__(self, serialObj):
         super(Communicate, self).__init__()
@@ -225,7 +233,7 @@ class Communicate(QtCore.QObject):
                 ddata = ddata[framesize:]
                 numbytes = len(ddata)
 
-                packettype, = struct.unpack('B', data[0:1])
+                packettype = struct.unpack('B', data[0:1])[0]
 
                 ts0, ts1, ts2, c1status = struct.unpack('BBBB', data[1:5])
                 timestamp = ts0 + ts1 * 256 + ts2 * 65536
@@ -239,7 +247,7 @@ class Communicate(QtCore.QObject):
                 c1ch1 *= exgCalFactor
                 c1ch2 *= exgCalFactor
 
-                self.data_signal.emit(c1ch1, c1ch2)
+                self.data_signal.emit(c1ch1, c1ch2, packettype)
         except KeyboardInterrupt:
             self.serial.write(struct.pack('B', 0x20))
             self.wait_for_ack()
@@ -388,7 +396,7 @@ class Communicate(QtCore.QObject):
     def setSamplingRateHz(self, rate=512):
         # send the set sampling rate command
         sampling_freq = rate #Hz
-        clock_wait = (2 << 14) // sampling_freq # Double / for integer division (python3)
+        clock_wait = (2 << 14) // sampling_freq # Double // for integer division (python3)
         self.serial.write(struct.pack('<BH', 0x05, clock_wait))
         self.wait_for_ack()   
 
@@ -409,4 +417,3 @@ def main(args=None):
     signal.signal(signal.SIGINT, lambda *a: app.quit())
     ui = Main(ros_node)
     sys.exit(app.exec_())
-
