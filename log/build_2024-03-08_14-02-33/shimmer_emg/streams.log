@@ -1,0 +1,48 @@
+[0.906s] Invoking command in '/home/william/repos/control_system_ws/src/shimmer_emg': PYTHONPATH=/home/william/repos/control_system_ws/build/shimmer_emg/prefix_override:/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/william/repos/control_system_ws/build/shimmer_emg/build install --record /home/william/repos/control_system_ws/build/shimmer_emg/install.log --single-version-externally-managed
+[1.124s] running egg_info
+[1.139s] writing ../../build/shimmer_emg/shimmer_emg.egg-info/PKG-INFO
+[1.140s] writing dependency_links to ../../build/shimmer_emg/shimmer_emg.egg-info/dependency_links.txt
+[1.140s] writing entry points to ../../build/shimmer_emg/shimmer_emg.egg-info/entry_points.txt
+[1.140s] writing requirements to ../../build/shimmer_emg/shimmer_emg.egg-info/requires.txt
+[1.140s] writing top-level names to ../../build/shimmer_emg/shimmer_emg.egg-info/top_level.txt
+[1.173s] reading manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+[1.174s] writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+[1.174s] running build
+[1.174s] running build_py
+[1.175s] copying shimmer_emg/imu_emg_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.175s] copying shimmer_emg/plot_data.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.175s] copying shimmer_emg/emg_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.175s] copying shimmer_emg/__init__.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.175s] copying shimmer_emg/record_data.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.176s] copying shimmer_emg/imu_aq.py -> /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg
+[1.176s] running install
+[1.176s] /home/william/.local/lib/python3.10/site-packages/setuptools/_distutils/cmd.py:66: SetuptoolsDeprecationWarning: setup.py install is deprecated.
+[1.176s] !!
+[1.177s] 
+[1.177s]         ********************************************************************************
+[1.177s]         Please avoid running ``setup.py`` directly.
+[1.177s]         Instead, use pypa/build, pypa/installer or other
+[1.177s]         standards-based tools.
+[1.177s] 
+[1.177s]         See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.
+[1.177s]         ********************************************************************************
+[1.177s] 
+[1.177s] !!
+[1.177s]   self.initialize_options()
+[1.182s] running install_lib
+[1.199s] copying /home/william/repos/control_system_ws/build/shimmer_emg/build/lib/shimmer_emg/imu_emg_aq.py -> /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+[1.200s] byte-compiling /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/imu_emg_aq.py to imu_emg_aq.cpython-310.pyc
+[1.203s] running install_data
+[1.219s] copying resource/shimmer_emg -> /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index/resource_index/packages
+[1.219s] copying package.xml -> /home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg
+[1.219s] running install_egg_info
+[1.238s] removing '/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info' (and everything under it)
+[1.238s] Copying ../../build/shimmer_emg/shimmer_emg.egg-info to /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info
+[1.239s] running install_scripts
+[1.390s] Installing emg_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+[1.391s] Installing imu_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+[1.391s] Installing imu_emg_aq script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+[1.391s] Installing plot_data script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+[1.391s] Installing record_data script to /home/william/repos/control_system_ws/install/shimmer_emg/lib/shimmer_emg
+[1.392s] writing list of installed files to '/home/william/repos/control_system_ws/build/shimmer_emg/install.log'
+[1.424s] Invoked command in '/home/william/repos/control_system_ws/src/shimmer_emg' returned '0': PYTHONPATH=/home/william/repos/control_system_ws/build/shimmer_emg/prefix_override:/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/william/repos/control_system_ws/build/shimmer_emg/build install --record /home/william/repos/control_system_ws/build/shimmer_emg/install.log --single-version-externally-managed

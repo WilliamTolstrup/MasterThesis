@@ -11,8 +11,12 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import pyqtSignal
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool, Empty, UInt8
+from std_msgs.msg import Bool, Empty, UInt8, UInt64
+from builtin_interfaces.msg import Time
 from geometry_msgs.msg import Vector3
+from collections import deque
+from threading import Timer
+
 
 class Main(QtWidgets.QMainWindow):
     def __init__(self, node):
@@ -20,7 +24,7 @@ class Main(QtWidgets.QMainWindow):
 
         self.node = node  # ROS 2 node
         self.initUI() # GUI
-
+        
         # Define serial object
         self.serialObj = serial.Serial()
         self.serialObj.baudrate = 115200
@@ -51,8 +55,10 @@ class Main(QtWidgets.QMainWindow):
         self.zf_lp_ch2 = self.zf_lp_ch1.copy()
 
         # Serial thread and ROS 2 publishers/subscribers
-        self.serial_handler = Communicate(self.serialObj)
+        self.serial_handler = Communicate(self.serialObj, self.node)
         # ------------------- ROS2 Publisher ----------------------
+        # Timestamp
+        self.pubTimestamp = self.node.create_publisher(Time, '/shimmer/timestamp', 10)
         # EMG
         self.pubEmgRaw = self.node.create_publisher(Vector3, '/emg/emg_raw', 10)
         self.pubEmgFiltered = self.node.create_publisher(Vector3, '/emg/emg_filtered', 10)
@@ -126,12 +132,16 @@ class Main(QtWidgets.QMainWindow):
             time.sleep(1)
             self.serialObj.close() 
             
-    def addData_callbackFunc(self, value1,value2, accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ):
-        # EMG
+    def addData_callbackFunc(self, timestamp_sec, timestamp_nsec, ch1, ch2, accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ):
+        # Timestamp
+        timestampMsg = Time()
+        timestampMsg.sec = timestamp_sec
+        timestampMsg.nanosec = timestamp_nsec
 
+        # EMG
         # Step 1: Bandpass filter
-        bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [value1], zi=self.zf_bp_ch1)
-        bp_ch2, self.zf_bp_ch2 = lfilter(self.b_bp, self.a_bp, [value2], zi=self.zf_bp_ch2)
+        bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [ch1], zi=self.zf_bp_ch1)
+        bp_ch2, self.zf_bp_ch2 = lfilter(self.b_bp, self.a_bp, [ch2], zi=self.zf_bp_ch2)
 
         # Step 2: Bandstop filter
         bs_ch1, self.zf_bs_ch1 = lfilter(self.b_bs, self.a_bs, bp_ch1, zi=self.zf_bs_ch1)
@@ -146,8 +156,8 @@ class Main(QtWidgets.QMainWindow):
         emg_filtered_msg = Vector3()
 
         # Assign raw values
-        emg_raw_msg.x = value1
-        emg_raw_msg.y = value2
+        emg_raw_msg.x = ch1
+        emg_raw_msg.y = ch2
 
         # Assign filtered values
         emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
@@ -171,6 +181,7 @@ class Main(QtWidgets.QMainWindow):
         magMsg.z = magZ        
         
         # Publish
+        self.pubTimestamp.publish(timestampMsg)
         self.pubAcc.publish(accMsg)
         self.pubGyro.publish(gyroMsg)
         self.pubMag.publish(magMsg)
@@ -181,13 +192,34 @@ class Main(QtWidgets.QMainWindow):
 
 class Communicate(QtCore.QObject):
     # A class for configuring the EMG module and reading the data from it
-    data_signal = pyqtSignal(float, float, float, float, float, float, float, float, float, float, float)
+    data_signal = pyqtSignal(int, int, float, float, float, float, float, float, float, float, float, float, float)
 
-    def __init__(self, serialObj):
+    def __init__(self, serialObj, node):
         super(Communicate, self).__init__()
         self.reading = False
         self.serial = serialObj
-        self.exgRes_24bit = True
+        self.node = node
+        self.buffer = deque()
+        self.publish_rate = 0.2 # Seconds, meaining it will publish 5 times per second
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.publish_averaged_data)
+        self.timer.start(int(self.publish_rate * 1000)) # milliseconds, also .start required int
+        self.last_published_timestamp = 0
+
+    def publish_averaged_data(self):
+        if not self.buffer:
+            return
+
+        # Calculate average
+        average_data = [sum(x) / len(x) for x in zip(*self.buffer)]
+        self.buffer.clear()
+
+        # Create timestamp
+        current_time = self.node.get_clock().now()
+        timestamp_sec = current_time.seconds_nanoseconds()[0]
+        timestamp_nsec = current_time.seconds_nanoseconds()[1]
+        if timestamp_nsec != self.last_published_timestamp: # ensure that only 1 message is published per timestamp
+            self.data_signal.emit(timestamp_sec, timestamp_nsec, *average_data)
 
     def dataSendLoop(self):
         self.initialize_serial()
@@ -207,6 +239,18 @@ class Communicate(QtCore.QObject):
         ddata = b""  # Use bytes literal for Python 3
         numbytes = 0
         framesize = 29  # 1 byte packet type + 4 bytes timestamp + 6 bytes emg, 18 bytes imu (6x3 acc, gyro, mag)
+        # Sensitivity
+        gyro_sensitivity = 131 # Based on MPU-9150 chip data from Invensense +-3 based on temperature, so shouldn't be a problem
+        mag_sensitivity_xy = 1100 # Based on LSM303DLHC data from STMicroelectronics. Sensitivity based on +-1.3 field full-scale
+        mag_sensitivity_z = 980
+
+        # for the analog accelerometer, we need the ADC the data to convert the data to gs.
+        n = 10 # 10-bit ADC (if it doesn't work, try 12)
+        adc_resolution = 2**n
+        reference_voltage = 3.3
+        sensitivity_v_per_g = 0.6 # 600 mV/g
+        zero_g_voltage = 1.5 # Zero-g offset is typical 1.5 V with +-0.2 based on temperature
+
         try:
             while self.reading:
                 while numbytes < framesize:
@@ -219,19 +263,41 @@ class Communicate(QtCore.QObject):
 
                 packettype = struct.unpack('B', data[0:1])
 
-                ts0, ts1, ts2, c1status = struct.unpack('BBBB', data[1:5])
-                timestamp = ts0 + ts1 * 256 + ts2 * 65536
+                #ts0, ts1, ts2, c1status = struct.unpack('BBBB', data[1:5])
+                #timestamp = ts0 + ts1 * 256 + ts2 * 65536
 
                 (accx, accy, accz) = struct.unpack('HHH', data[5:11])
                 (gyrox, gyroy, gyroz) = struct.unpack('HHH', data[11:17])
                 (magx, magy, magz) = struct.unpack('>hhh', data[17:23])
-                c1ch1 = struct.unpack('>i', data[23:26] + b'\0')[0] >> 8
-                c1ch2 = struct.unpack('>i', data[26:29] + b'\0')[0] >> 8
+                ch1 = struct.unpack('>i', data[23:26] + b'\0')[0] >> 8
+                ch2 = struct.unpack('>i', data[26:29] + b'\0')[0] >> 8
 
-                c1ch1 *= exgCalFactor
-                c1ch2 *= exgCalFactor
+                # Conversions
+                # Convert raw data to voltage
+                voltage_x = (accx / adc_resolution) * reference_voltage
+                voltage_y = (accy / adc_resolution) * reference_voltage
+                voltage_z = (accz / adc_resolution) * reference_voltage
 
-                self.data_signal.emit(c1ch1, c1ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz)
+                # Convert voltage to gs
+                accx = (voltage_x - zero_g_voltage) / sensitivity_v_per_g
+                accy = (voltage_y - zero_g_voltage) / sensitivity_v_per_g
+                accz = (voltage_z - zero_g_voltage) / sensitivity_v_per_g
+
+                # Convert to degrees/sec
+                gyrox = (gyrox/gyro_sensitivity)
+                gyroy = (gyroy/gyro_sensitivity)
+                gyroz = (gyroz/gyro_sensitivity)
+
+                # Convert to gs
+                magx = (magx / mag_sensitivity_xy)
+                magy = (magy / mag_sensitivity_xy)
+                magz = (magz / mag_sensitivity_z)
+
+                ch1 *= exgCalFactor
+                ch2 *= exgCalFactor
+
+                self.buffer.append([ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz])
+                #self.data_signal.emit(timestamp_sec, timestamp_nsec, ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz)
 
         except KeyboardInterrupt:
             self.serial.write(struct.pack('B', 0x20))
@@ -288,7 +354,7 @@ class Communicate(QtCore.QObject):
         # Send the set sensors command (IMU and EMG)
         print("")
         print("Sending sensor commands for IMU and EMG communication...")
-        self.serial.write(struct.pack('BBBBB', 0x08, 0xE0, 0x10, 0x00, 0x00)) #If it doesn't work, try BBBBB. 0x08 is command byte, 0xE0 enables IMU, 0x10 enables EMG unit, 0x00 is trailing.
+        self.serial.write(struct.pack('BBBBB', 0x08, 0xE0, 0x10, 0x00, 0x00)) # 0x08 is command byte, 0xE0 enables IMU, 0x10 enables EMG unit, 0x00 is trailing.
         self.wait_for_ack()
         time.sleep(2)
 
@@ -307,8 +373,10 @@ class Communicate(QtCore.QObject):
 
         # send start streaming command
         print("Start streaming command sent...\n")
+        print("")
         self.serial.write(struct.pack('B', 0x07))
         self.wait_for_ack()
+        print("Now streaming data.")
 
     def wait_for_ack(self):
         ddata = b""

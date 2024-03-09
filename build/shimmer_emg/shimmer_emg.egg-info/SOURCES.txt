@@ -13,7 +13,8 @@ shimmer_emg/__init__.py
 shimmer_emg/emg_aq.py
 shimmer_emg/imu_aq.py
 shimmer_emg/imu_emg_aq.py
-shimmer_emg/plot_emg_from_csv.py
+shimmer_emg/plot_data.py
+shimmer_emg/record_data.py
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py

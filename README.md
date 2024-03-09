@@ -20,6 +20,9 @@ ros2 topic echo *
 */imu/gyro
 */imu/mag
 
+Before running the script, disable ModemManager, as it may interfere with the serial port.
+    sudo systemctl stop ModemManager
+
 
 
 #### ROADMAP
