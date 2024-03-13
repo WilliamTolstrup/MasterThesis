@@ -1,0 +1,198 @@
+[0.767s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build']
+[0.767s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=16, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0x797b86a776a0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x797b86a770d0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x797b86a770d0>>)
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.819s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.819s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/william/repos/control_system_ws'
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.819s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.833s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extensions ['ignore', 'ignore_ament_install']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extension 'ignore'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extension 'ignore_ament_install'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extensions ['colcon_pkg']
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extension 'colcon_pkg'
+[0.834s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extensions ['colcon_meta']
+[0.835s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extension 'colcon_meta'
+[0.835s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extensions ['ros']
+[0.835s] Level 1:colcon.colcon_core.package_identification:_identify(src/custom_interfaces) by extension 'ros'
+[0.837s] DEBUG:colcon.colcon_core.package_identification:Package 'src/custom_interfaces' with type 'ros.ament_cmake' and name 'custom_interfaces'
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extensions ['ignore', 'ignore_ament_install']
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extension 'ignore'
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extension 'ignore_ament_install'
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extensions ['colcon_pkg']
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extension 'colcon_pkg'
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extensions ['colcon_meta']
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extension 'colcon_meta'
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extensions ['ros']
+[0.837s] Level 1:colcon.colcon_core.package_identification:_identify(src/shimmer_emg) by extension 'ros'
+[0.838s] DEBUG:colcon.colcon_core.package_identification:Package 'src/shimmer_emg' with type 'ros.ament_python' and name 'shimmer_emg'
+[0.838s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.838s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.838s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.838s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.838s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.910s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.910s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.933s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 273 installed packages in /opt/ros/humble
+[0.934s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_args' from command line to 'None'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_target' from command line to 'None'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_clean_cache' from command line to 'False'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_clean_first' from command line to 'False'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'cmake_force_configure' from command line to 'False'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'ament_cmake_args' from command line to 'None'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'catkin_cmake_args' from command line to 'None'
+[0.989s] Level 5:colcon.colcon_core.verb:set package 'custom_interfaces' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.989s] DEBUG:colcon.colcon_core.verb:Building package 'custom_interfaces' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/william/repos/control_system_ws/build/custom_interfaces', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/william/repos/control_system_ws/install/custom_interfaces', 'merge_install': False, 'path': '/home/william/repos/control_system_ws/src/custom_interfaces', 'symlink_install': False, 'test_result_base': None}
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_args' from command line to 'None'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_target' from command line to 'None'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_clean_cache' from command line to 'False'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_clean_first' from command line to 'False'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'cmake_force_configure' from command line to 'False'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'ament_cmake_args' from command line to 'None'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'catkin_cmake_args' from command line to 'None'
+[1.000s] Level 5:colcon.colcon_core.verb:set package 'shimmer_emg' build argument 'catkin_skip_building_tests' from command line to 'False'
+[1.000s] DEBUG:colcon.colcon_core.verb:Building package 'shimmer_emg' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/william/repos/control_system_ws/build/shimmer_emg', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/william/repos/control_system_ws/install/shimmer_emg', 'merge_install': False, 'path': '/home/william/repos/control_system_ws/src/shimmer_emg', 'symlink_install': False, 'test_result_base': None}
+[1.010s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[1.021s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[1.022s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/william/repos/control_system_ws/src/custom_interfaces' with build type 'ament_cmake'
+[1.022s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/william/repos/control_system_ws/src/custom_interfaces'
+[1.034s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[1.034s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.034s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.063s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/william/repos/control_system_ws/build/custom_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/william/repos/control_system_ws/build/custom_interfaces -- -j16 -l16
+[1.389s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/william/repos/control_system_ws/build/custom_interfaces' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/william/repos/control_system_ws/build/custom_interfaces -- -j16 -l16
+[1.469s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/william/repos/control_system_ws/build/custom_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/william/repos/control_system_ws/build/custom_interfaces
+[1.526s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(custom_interfaces)
+[1.527s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/william/repos/control_system_ws/build/custom_interfaces' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/william/repos/control_system_ws/build/custom_interfaces
+[1.541s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces' for CMake module files
+[1.542s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces' for CMake config files
+[1.542s] Level 1:colcon.colcon_core.shell:create_environment_hook('custom_interfaces', 'cmake_prefix_path')
+[1.553s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.ps1'
+[1.554s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.dsv'
+[1.554s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.sh'
+[1.555s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib'
+[1.555s] Level 1:colcon.colcon_core.shell:create_environment_hook('custom_interfaces', 'ld_library_path_lib')
+[1.566s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.ps1'
+[1.566s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.dsv'
+[1.566s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.sh'
+[1.566s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/bin'
+[1.566s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib/pkgconfig/custom_interfaces.pc'
+[1.567s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib/python3.10/site-packages'
+[1.567s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/bin'
+[1.577s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.ps1'
+[1.578s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.dsv'
+[1.579s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.sh'
+[1.579s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.bash'
+[1.580s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.zsh'
+[1.580s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/william/repos/control_system_ws/install/custom_interfaces/share/colcon-core/packages/custom_interfaces)
+[1.656s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(custom_interfaces)
+[1.667s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces' for CMake module files
+[1.668s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces' for CMake config files
+[1.668s] Level 1:colcon.colcon_core.shell:create_environment_hook('custom_interfaces', 'cmake_prefix_path')
+[1.679s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.ps1'
+[1.679s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.dsv'
+[1.679s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/cmake_prefix_path.sh'
+[1.680s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib'
+[1.680s] Level 1:colcon.colcon_core.shell:create_environment_hook('custom_interfaces', 'ld_library_path_lib')
+[1.690s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.ps1'
+[1.691s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.dsv'
+[1.691s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/hook/ld_library_path_lib.sh'
+[1.691s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/bin'
+[1.691s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib/pkgconfig/custom_interfaces.pc'
+[1.692s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/lib/python3.10/site-packages'
+[1.692s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/custom_interfaces/bin'
+[1.702s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.ps1'
+[1.703s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.dsv'
+[1.703s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.sh'
+[1.704s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.bash'
+[1.704s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/custom_interfaces/share/custom_interfaces/package.zsh'
+[1.704s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/william/repos/control_system_ws/install/custom_interfaces/share/colcon-core/packages/custom_interfaces)
+[1.705s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/william/repos/control_system_ws/src/shimmer_emg' with build type 'ament_python'
+[1.705s] Level 1:colcon.colcon_core.shell:create_environment_hook('shimmer_emg', 'ament_prefix_path')
+[1.715s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/ament_prefix_path.ps1'
+[1.716s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/ament_prefix_path.dsv'
+[1.716s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/ament_prefix_path.sh'
+[1.727s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.727s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.909s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/william/repos/control_system_ws/src/shimmer_emg'
+[1.920s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.921s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.471s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/william/repos/control_system_ws/src/shimmer_emg': AMENT_PREFIX_PATH=/home/william/repos/control_system_ws/install/custom_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/william/repos/control_system_ws/install/custom_interfaces LD_LIBRARY_PATH=/home/william/repos/control_system_ws/install/custom_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/william/repos/control_system_ws/build/shimmer_emg/prefix_override:/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages:/home/william/repos/control_system_ws/install/custom_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/william/repos/control_system_ws/build/shimmer_emg/build install --record /home/william/repos/control_system_ws/build/shimmer_emg/install.log --single-version-externally-managed
+[2.919s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/william/repos/control_system_ws/src/shimmer_emg' returned '0': AMENT_PREFIX_PATH=/home/william/repos/control_system_ws/install/custom_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/william/repos/control_system_ws/install/custom_interfaces LD_LIBRARY_PATH=/home/william/repos/control_system_ws/install/custom_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/william/repos/control_system_ws/build/shimmer_emg/prefix_override:/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages:/home/william/repos/control_system_ws/install/custom_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/william/repos/control_system_ws/build/shimmer_emg/build install --record /home/william/repos/control_system_ws/build/shimmer_emg/install.log --single-version-externally-managed
+[2.933s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg' for CMake module files
+[2.933s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg' for CMake config files
+[2.934s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg/lib'
+[2.934s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg/bin'
+[2.934s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg/lib/pkgconfig/shimmer_emg.pc'
+[2.934s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages'
+[2.934s] Level 1:colcon.colcon_core.shell:create_environment_hook('shimmer_emg', 'pythonpath')
+[2.946s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/pythonpath.ps1'
+[2.947s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/pythonpath.dsv'
+[2.947s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/hook/pythonpath.sh'
+[2.948s] Level 1:colcon.colcon_core.environment:checking '/home/william/repos/control_system_ws/install/shimmer_emg/bin'
+[2.948s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(shimmer_emg)
+[2.961s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.ps1'
+[2.962s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.dsv'
+[2.962s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.sh'
+[2.963s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.bash'
+[2.963s] INFO:colcon.colcon_core.shell:Creating package script '/home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.zsh'
+[2.963s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/william/repos/control_system_ws/install/shimmer_emg/share/colcon-core/packages/shimmer_emg)
+[2.963s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[2.964s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[2.964s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[2.964s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[2.981s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[2.981s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[2.981s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[2.997s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[3.012s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/william/repos/control_system_ws/install/local_setup.ps1'
+[3.013s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/william/repos/control_system_ws/install/_local_setup_util_ps1.py'
+[3.014s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/william/repos/control_system_ws/install/setup.ps1'
+[3.027s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/william/repos/control_system_ws/install/local_setup.sh'
+[3.028s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/william/repos/control_system_ws/install/_local_setup_util_sh.py'
+[3.029s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/william/repos/control_system_ws/install/setup.sh'
+[3.043s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/william/repos/control_system_ws/install/local_setup.bash'
+[3.043s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/william/repos/control_system_ws/install/setup.bash'
+[3.057s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/william/repos/control_system_ws/install/local_setup.zsh'
+[3.058s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/william/repos/control_system_ws/install/setup.zsh'

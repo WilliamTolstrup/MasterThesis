@@ -23,14 +23,64 @@ class Main(QtWidgets.QMainWindow):
         super(Main, self).__init__()
 
         self.node = node  # ROS 2 node
-        self.initUI() # GUI
         
+        self.errorBias = [0, 0, 0, 0, 0, 0, 0, 0, 0] # Accel, gyro, mag, xyz
+
         # Define serial object
         self.serialObj = serial.Serial()
         self.serialObj.baudrate = 115200
         self.serialObj.timeout = 1
 
-        # ---------------- Filter setup --------------------
+        # ROS2 Publisher
+        # Timestamp
+        self.pubTimestamp = self.node.create_publisher(Time, '/shimmer/timestamp', 10)
+        # EMG
+        self.pubEmgRaw = self.node.create_publisher(Vector3, '/emg/emg_raw', 10)
+        self.pubEmgFiltered = self.node.create_publisher(Vector3, '/emg/emg_filtered', 10)
+        # IMU
+        self.pubAcc = self.node.create_publisher(Vector3, '/imu/acc', 10)
+        self.pubGyro = self.node.create_publisher(Vector3, '/imu/gyro', 10)
+        self.pubMag = self.node.create_publisher(Vector3, '/imu/mag', 10)
+
+        # ROS2 Subscription
+        # EMG and IMU
+        self.node.create_subscription(Empty, '/shimmer/stop', self.stop_Btn, 10)
+        self.node.create_subscription(UInt8, '/shimmer/start', self.start_Btn, 10)
+
+        # Serial thread and ROS 2 publishers/subscribers
+        self.serial_handler = Communicate(self.serialObj, self.node)
+        self.calibration_service = CalibrationService(node, self.serial_handler)
+
+        # Data thread
+        self.dataThread = QtCore.QThread()
+        self.serial_handler.moveToThread(self.dataThread)
+        self.dataThread.started.connect(self.serial_handler.dataSendLoop)
+        self.serial_handler.data_signal.connect(self.addData_callbackFunc)
+
+        # Calibration thread
+        self.calibrationThread = QtCore.QThread()
+        self.calibration_service.moveToThread(self.calibrationThread)
+
+        self.setup_signals() # Message passing between classes
+        self.setup_filters() # EMG filters
+        self.initUI()        # GUI
+        self.setup_sma()     # Simple moving average
+
+    def setup_sma(self): # Simple Moving Average
+        window = 60
+        self.accX_sma = RealTimeMovingAverage(window_size=window)
+        self.accY_sma = RealTimeMovingAverage(window_size=window)
+        self.accZ_sma = RealTimeMovingAverage(window_size=window)
+
+        self.gyroX_sma = RealTimeMovingAverage(window_size=window)
+        self.gyroY_sma = RealTimeMovingAverage(window_size=window)
+        self.gyroZ_sma = RealTimeMovingAverage(window_size=window)
+
+        self.magX_sma = RealTimeMovingAverage(window_size=window)
+        self.magY_sma = RealTimeMovingAverage(window_size=window)
+        self.magZ_sma = RealTimeMovingAverage(window_size=window)
+
+    def setup_filters(self):
         self.Fs = 1000
         # Bandpass, bandstop, and lowpass filter settings
         Fco_bp = [10, self.Fs * 0.45]
@@ -54,53 +104,66 @@ class Main(QtWidgets.QMainWindow):
         self.zf_bs_ch2 = self.zf_bs_ch1.copy()
         self.zf_lp_ch2 = self.zf_lp_ch1.copy()
 
-        # Serial thread and ROS 2 publishers/subscribers
-        self.serial_handler = Communicate(self.serialObj, self.node)
-        # ------------------- ROS2 Publisher ----------------------
-        # Timestamp
-        self.pubTimestamp = self.node.create_publisher(Time, '/shimmer/timestamp', 10)
-        # EMG
-        self.pubEmgRaw = self.node.create_publisher(Vector3, '/emg/emg_raw', 10)
-        self.pubEmgFiltered = self.node.create_publisher(Vector3, '/emg/emg_filtered', 10)
-        # IMU
-        self.pubAcc = self.node.create_publisher(Vector3, '/imu/acc', 10)
-        self.pubGyro = self.node.create_publisher(Vector3, '/imu/gyro', 10)
-        self.pubMag = self.node.create_publisher(Vector3, '/imu/mag', 10)
+    def setup_signals(self):
+        self.calibration_service.calibrationMessage.connect(self.update_calibration_message)
+        self.calibration_service.calibrationChanged.connect(self.update_calibration_status)
+        self.calibration_service.calibrationComplete.connect(self.update_calibration_button)
+        self.serial_handler.calibration_signal.connect(self.calibration_service.handle_calibration_buffer)
+        self.calibration_service.errorBiasUpdate.connect(self.update_error_bias)
 
-        # -------------------- ROS2 Subscription ------------------
-        # EMG and IMU
-        self.node.create_subscription(Empty, '/shimmer/stop', self.stop_Btn, 10)
-        self.node.create_subscription(UInt8, '/shimmer/start', self.start_Btn, 10)
+    def update_error_bias(self, bias):
+        self.errorBias = bias
 
+    def update_calibration_message(self, title, message):
+        QtWidgets.QMessageBox.information(self, title, message)
 
-        self.thread1 = QtCore.QThread()
-        self.serial_handler.moveToThread(self.thread1)
-        self.thread1.started.connect(self.serial_handler.dataSendLoop)
-        self.serial_handler.data_signal.connect(self.addData_callbackFunc)
+    def update_calibration_status(self, message, color):
+        self.calibrateStatus.setText(message)
+        self.calibrateStatus.setStyleSheet(f"QLabel {{ color: {color}; }}")
+
+    def update_calibration_button(self, status):
+        self.calibrateBtn.setEnabled(status)
 
     def initUI(self):
-        self.setWindowTitle("EMG Device Controller")
+        self.setWindowTitle("Shimmer Controller")
         self.setGeometry(100, 100, 800, 600)
 
         # Start button
         self.startBtn = QtWidgets.QPushButton("Start", self)
         self.startBtn.move(50, 500)
+        self.startBtn.resize(100, 40)
         self.startBtn.clicked.connect(self.start_Btn)
 
         # Stop button
         self.stopBtn = QtWidgets.QPushButton("Stop", self)
-        self.stopBtn.move(150, 500)
+        self.stopBtn.move(155, 500)
+        self.stopBtn.resize(100, 40)
         self.stopBtn.clicked.connect(self.stop_Btn)
+
+        # Calibrate button
+        self.calibrateBtn = QtWidgets.QPushButton("Calibrate", self)
+        self.calibrateBtn.move(260, 500)
+        self.calibrateBtn.resize(200, 40)
+        self.calibrateBtn.clicked.connect(self.calibrate_Btn)
 
         # Status label
         self.statusLabel = QtWidgets.QLabel("Disconnected", self)
         self.statusLabel.move(50, 50)
-        self.statusLabel.resize(200, 20)
+        self.statusLabel.resize(200, 40)
+        self.statusLabel.setStyleSheet("QLabel {color : red; }")
+
+        # Calibration status label
+        self.calibrateStatus = QtWidgets.QLabel("Not calibrated", self)
+        self.calibrateStatus.move(50, 100)
+        self.calibrateStatus.resize(800, 80)
+        self.calibrateStatus.setStyleSheet("QLabel {color : red; }")
 
         # Show the window
         self.show()
 
-    # Remaining methods are updated analogously, adapting PyQt5, Python 3, and ROS 2 usage.
+    ############################################################
+    ###                      GUI Buttons                     ###
+    ############################################################
 
     def start_Btn(self):
         try:
@@ -110,13 +173,15 @@ class Main(QtWidgets.QMainWindow):
             self.serialObj.port = port
             self.serialObj.open()
             self.serial_handler.reading = True
-            self.thread1.start()
+            self.dataThread.start()
             print('####################################')
             print('###  Reading serial port started ###')
             print('####################################')
+            self.statusLabel.setText("Connected")
+            self.statusLabel.setStyleSheet("QLabel {color : green; }")
 
         except:
-            print('This Serial Port Is Not Available')
+            print('Error STA1: This Serial Port Is Not Available')
 
     def stop_Btn(self,data):
         print("####################################")
@@ -124,14 +189,32 @@ class Main(QtWidgets.QMainWindow):
         print("####################################")
         if self.serialObj.is_open:
             self.serial_handler.reading = False
-            self.thread1.exit()
+            self.dataThread.exit()
             #send stop streaming command
             self.serialObj.write(struct.pack('B', 0x20))
             time.sleep(1)
             self.serial_handler.wait_for_ack() 
             time.sleep(1)
             self.serialObj.close() 
-            
+            self.statusLabel.setText("Disconnected")
+            self.statusLabel.setStyleSheet("QLabel {color : red; }")
+
+    def calibrate_Btn(self):
+        if not self.serial_handler.reading:
+            QtWidgets.QMessageBox.warning(self, "Warning!", "The device is not connected, please connect before calibrating!")
+            print("Error C1: Please connect device before calibrating!")
+            return
+
+        else:
+            self.calibrationThread.start()
+            # Display static calibration instructions and wait
+            print("Initiating calibration...")
+            self.calibration_service.start_calibration()
+
+    ############################################################
+    ###                    Data callback                     ###
+    ############################################################
+
     def addData_callbackFunc(self, timestamp_sec, timestamp_nsec, ch1, ch2, accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ):
         # Timestamp
         timestampMsg = Time()
@@ -163,22 +246,55 @@ class Main(QtWidgets.QMainWindow):
         emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
         emg_filtered_msg.y = lp_ch2[0]  # Same here
 
+        # Moving average filter on incoming data
+        sma_accX = self.accX_sma.update(accX)
+        sma_accY = self.accX_sma.update(accY)
+        sma_accZ = self.accX_sma.update(accZ)
+
+        sma_gyroX = self.gyroX_sma.update(gyroX)
+        sma_gyroY = self.gyroX_sma.update(gyroY)
+        sma_gyroZ = self.gyroX_sma.update(gyroZ)
+
+        sma_magX = self.magX_sma.update(magX)
+        sma_magY = self.magX_sma.update(magY)
+        sma_magZ = self.magX_sma.update(magZ)
+
+        # IMU Error correction
+        corrected_accX = sma_accX - self.errorBias[0]
+        corrected_accY = sma_accY - self.errorBias[1]
+        corrected_accZ = sma_accZ - self.errorBias[2]
+
+        corrected_gyroX = sma_gyroX - self.errorBias[3]
+        corrected_gyroY = sma_gyroY - self.errorBias[4]
+        corrected_gyroZ = sma_gyroZ - self.errorBias[5]
+
+        corrected_magX = sma_magX - self.errorBias[6]
+        corrected_magY = sma_magY - self.errorBias[7]
+        corrected_magZ = sma_magZ    # No mag_z errorbias, since we did 2D calibration
+
+        print("Regular accX")         ## Debugging
+        print(accX)                   ## Debugging
+        print("SMA accX")             ## Debugging
+        print(corrected_accX)         ## Debugging
+        print("Error bias for accX")  ## Debugging
+        print(self.errorBias[0])      ## Debugging
+
         # IMU
         accMsg = Vector3()
         gyroMsg = Vector3()
         magMsg = Vector3()
         
-        accMsg.x = accX
-        accMsg.y = accY
-        accMsg.z = accZ
+        accMsg.x = corrected_accX
+        accMsg.y = corrected_accY
+        accMsg.z = corrected_accZ
         
-        gyroMsg.x = gyroX
-        gyroMsg.y = gyroY
-        gyroMsg.z = gyroZ
+        gyroMsg.x = corrected_gyroX
+        gyroMsg.y = corrected_gyroY
+        gyroMsg.z = corrected_gyroZ
         
-        magMsg.x = magX
-        magMsg.y = magY
-        magMsg.z = magZ        
+        magMsg.x = corrected_magX
+        magMsg.y = corrected_magY
+        magMsg.z = corrected_magZ        
         
         # Publish
         self.pubTimestamp.publish(timestampMsg)
@@ -188,11 +304,108 @@ class Main(QtWidgets.QMainWindow):
         self.pubEmgRaw.publish(emg_raw_msg)
         self.pubEmgFiltered.publish(emg_filtered_msg)
 
+class CalibrationService(QtCore.QObject):
+    calibrationChanged = pyqtSignal(str, str) # Message and color
+    calibrationComplete = pyqtSignal(bool) # True or False, whether to enable the calibrate button
+    calibrationInProgress = pyqtSignal(bool) # True of False, whether the calibration is in progress or not
+    calibrationProgress = pyqtSignal(int) # Remaining time in seconds
+    calibrationMessage = pyqtSignal(str, str) # Title, message
+    errorBiasUpdate = pyqtSignal(list)
 
+    def __init__(self, node, serial_handler):
+        super().__init__()
+        self.node = node
+        self.serial_handler_calibration = serial_handler
+        self.calibrationInProgress.emit(False)
+        self.calibration_static_complete = False
+        self.calibration_buffer = []
+        self.errorBias = [0, 0, 0, 0, 0, 0]
+
+    def handle_calibration_buffer(self, buffer):
+        self.calibration_buffer = buffer
+
+
+    def start_calibration(self):
+        self.calibration_buffer.clear()
+        print("Buffer post clear: ")
+        print(len(self.calibration_buffer))
+        self.calibrationComplete.emit(False) # Disable calibration button while calibrating
+        self.calibrationInProgress.emit(True)
+
+        time.sleep(3)
+
+        # Calculate average of accelerometer and gyro
+        if self.calibration_static_complete == False:
+            self.calibrationChanged.emit("Static calibration!\nLeave the device level and stationary for 10 seconds", "blue")
+            QtCore.QTimer.singleShot(10000, self.complete_static_calibration) # Wait 10 seconds and then check if it is enough
+
+        # HSI calibration for magnetometer
+        elif self.calibration_static_complete == True:
+            self.calibrationChanged.emit("Dynamic calibration!\nRotate the device slowly for 10 seconds.", "blue")
+            QtCore.QTimer.singleShot(10000, self.complete_dynamic_calibration) # Wait 10 seconds and then complete calibration
+
+    def complete_static_calibration(self):
+        print("STATIC CALIBRATION COMPLETED!!!")  ## Debugging
+        self.calibration_static_complete = True
+
+        # Calculate average for calibration
+        if self.calibration_buffer:
+            acc_x = [x[0] for x in self.calibration_buffer]
+            acc_y = [y[1] for y in self.calibration_buffer]
+            acc_z = [z[2] for z in self.calibration_buffer]
+
+            gyro_x = [x[3] for x in self.calibration_buffer]
+            gyro_y = [y[4] for y in self.calibration_buffer]
+            gyro_z = [z[5] for z in self.calibration_buffer]
+
+            acc_bias_x = sum(acc_x) / len(acc_x)
+            acc_bias_y = sum(acc_y) / len(acc_y)
+            acc_bias_z = sum(acc_z) / len(acc_z)
+
+            gyro_bias_x = sum(gyro_x) / len(gyro_x)
+            gyro_bias_y = sum(gyro_y) / len(gyro_y)
+            gyro_bias_z = sum(gyro_z) / len(gyro_z)
+
+            self.errorBias[0:6] = [acc_bias_x, acc_bias_y, acc_bias_z, gyro_bias_x, gyro_bias_y, gyro_bias_z]
+            print(self.errorBias)  ## Debugging
+            print("Static SUM:")
+            print(sum(acc_x))
+            self.calibrationChanged.emit("Static calibration complete", "orange")
+
+            self.start_calibration() # Start the dynamic calibration
+
+        
+    def complete_dynamic_calibration(self):
+        # Perform HSI calibration for the mag data
+        if self.calibration_buffer:
+            # Hard iron calibration
+            mag_x = [x[-3] for x in self.calibration_buffer]
+            mag_y = [y[-2] for y in self.calibration_buffer]
+
+            # Calculate average bias
+            bias_x = sum(mag_x) / len(mag_x)
+            bias_y = sum(mag_y) / len(mag_y)
+
+            self.errorBias[7:8] = [bias_x, bias_y]
+
+            # Notify the user
+            self.calibrationChanged.emit("Dynamic calibration complete", "orange")
+            self.calibrationComplete.emit(True) # Enable calibration button after calibrating
+            self.currently_calibrating = False
+            self.calibrationInProgress.emit(False)
+            self.errorBiasUpdate.emit(self.errorBias)
+            print("####################################")
+            print("###     Calibration complete!    ###")
+            print("####################################")
+            print("")
+            print("Error bias: \n")
+            print(self.errorBias)
+            self.calibrationChanged.emit("Calibration complete", "green")
 
 class Communicate(QtCore.QObject):
     # A class for configuring the EMG module and reading the data from it
     data_signal = pyqtSignal(int, int, float, float, float, float, float, float, float, float, float, float, float)
+    calibration_signal = pyqtSignal(list)
 
     def __init__(self, serialObj, node):
         super(Communicate, self).__init__()
@@ -200,6 +413,7 @@ class Communicate(QtCore.QObject):
         self.serial = serialObj
         self.node = node
         self.buffer = deque()
+        self.calibration_buffer = []
         self.publish_rate = 0.2 # Seconds, meaining it will publish 5 times per second
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.publish_averaged_data)
@@ -223,18 +437,9 @@ class Communicate(QtCore.QObject):
 
     def dataSendLoop(self):
         self.initialize_serial()
-        exgGain = {
-            'GAIN_1': 1,
-            'GAIN_2': 2,
-            'GAIN_3': 3,
-            'GAIN_4': 4,
-            'GAIN_6': 6,
-            'GAIN_8': 8,
-            'GAIN_12': 12
-        }
+        gain = 12 # EMG gain 1,2,3,4,6,8,12
 
-
-        exgCalFactor = (((2.42 * 1000) / exgGain['GAIN_12']) / (pow(2, 23) - 1))
+        exgCalFactor = (((2.42 * 1000) / gain) / (pow(2, 23) - 1))
 
         ddata = b""  # Use bytes literal for Python 3
         numbytes = 0
@@ -297,7 +502,8 @@ class Communicate(QtCore.QObject):
                 ch2 *= exgCalFactor
 
                 self.buffer.append([ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz])
-                #self.data_signal.emit(timestamp_sec, timestamp_nsec, ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz)
+                self.calibration_buffer.append([accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz])
+                self.calibration_signal.emit(self.calibration_buffer)
 
         except KeyboardInterrupt:
             self.serial.write(struct.pack('B', 0x20))
@@ -395,6 +601,23 @@ class Communicate(QtCore.QObject):
         print("Sampling rate: ")
         print(sampling_freq)
         self.wait_for_ack()   
+
+
+class RealTimeMovingAverage:
+    def __init__(self, window_size):
+        self.window_size = window_size
+        self.data = deque(maxlen=window_size)
+        self.sum = 0.0
+
+    def update(self, new_value):
+        if len(self.data) == self.window_size:
+            self.sum -= self.data[0] # Remove oldest value from the sum
+        
+        self.data.append(new_value)
+        self.sum += new_value # Add newest data to the sum
+
+        return self.sum / len(self.data) # Return average of the window
+
 
 class Application(QtWidgets.QApplication):
     def __init__(self, sys_argv, node):

@@ -16,8 +16,8 @@ class DataListener(Node):
         self.file = open(self.filename, mode='w', newline='')  # 'a' appends new data onto the existing file. 'w' wipes the file before writing.
         self.writer = csv.writer(self.file)
         # Header for .csv file
-        if not self.file_exists:
-            self.writer.writerow(['timestamp', 'emg_ch1', 'emg_ch2', 'acc_x', 'acc_y', 'acc_z', 'gyro_x', 'gyro_y', 'gyro_z', 'mag_x', 'mag_y', 'mag_z'])
+        #if not self.file_exists:
+        self.writer.writerow(['timestamp', 'emg_ch1', 'emg_ch2', 'acc_x', 'acc_y', 'acc_z', 'gyro_x', 'gyro_y', 'gyro_z', 'mag_x', 'mag_y', 'mag_z'])
 
         # Initialize lists and flags
         self.timestamp_data = [0, 0]
