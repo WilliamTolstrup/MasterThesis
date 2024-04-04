@@ -15,8 +15,10 @@ from std_msgs.msg import Bool, Empty, UInt8, UInt64
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import Vector3
 from collections import deque
-from threading import Timer
-
+import subprocess
+import json
+from filterpy.kalman import UnscentedKalmanFilter as UKF
+from filterpy.kalman import MerweScaledSigmaPoints
 
 class Main(QtWidgets.QMainWindow):
     def __init__(self, node):
@@ -26,6 +28,17 @@ class Main(QtWidgets.QMainWindow):
         
         self.errorBias = [0, 0, 0, 0, 0, 0, 0, 0, 0] # Accel, gyro, mag, xyz
 
+        self.coefficients = {
+            'acc_x': None,
+            'acc_y': None,
+            'acc_z': None,
+            'gyro_x': None,
+            'gyro_y': None,
+            'gyro_z': None
+        }
+
+        ukf = UnscentedKalmanFilter(dt=0, process_noise_std=0.1, measurement_noise_std=0.1)
+
         # Define serial object
         self.serialObj = serial.Serial()
         self.serialObj.baudrate = 115200
@@ -33,14 +46,14 @@ class Main(QtWidgets.QMainWindow):
 
         # ROS2 Publisher
         # Timestamp
-        self.pubTimestamp = self.node.create_publisher(Time, '/shimmer/timestamp', 10)
+        self.pubTimestamp   = self.node.create_publisher(Time, '/shimmer/timestamp', 10)
         # EMG
-        self.pubEmgRaw = self.node.create_publisher(Vector3, '/emg/emg_raw', 10)
+        self.pubEmgRaw      = self.node.create_publisher(Vector3, '/emg/emg_raw', 10)
         self.pubEmgFiltered = self.node.create_publisher(Vector3, '/emg/emg_filtered', 10)
         # IMU
-        self.pubAcc = self.node.create_publisher(Vector3, '/imu/acc', 10)
+        self.pubAcc  = self.node.create_publisher(Vector3, '/imu/acc', 10)
         self.pubGyro = self.node.create_publisher(Vector3, '/imu/gyro', 10)
-        self.pubMag = self.node.create_publisher(Vector3, '/imu/mag', 10)
+        self.pubMag  = self.node.create_publisher(Vector3, '/imu/mag', 10)
 
         # ROS2 Subscription
         # EMG and IMU
@@ -66,26 +79,35 @@ class Main(QtWidgets.QMainWindow):
         self.initUI()        # GUI
         self.setup_sma()     # Simple moving average
 
+    def load_calibration_data(filepath='calibration_data.json'):
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        return data['coefficients']
+
     def setup_sma(self): # Simple Moving Average
-        window = 60
-        self.accX_sma = RealTimeMovingAverage(window_size=window)
-        self.accY_sma = RealTimeMovingAverage(window_size=window)
-        self.accZ_sma = RealTimeMovingAverage(window_size=window)
+        IMU_window = 50 #23040 # baudrate / 5
+        EMG_window = 25
+        self.accX_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.accY_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.accZ_sma = RealTimeMovingAverage(window_size=IMU_window)
 
-        self.gyroX_sma = RealTimeMovingAverage(window_size=window)
-        self.gyroY_sma = RealTimeMovingAverage(window_size=window)
-        self.gyroZ_sma = RealTimeMovingAverage(window_size=window)
+        self.gyroX_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.gyroY_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.gyroZ_sma = RealTimeMovingAverage(window_size=IMU_window)
 
-        self.magX_sma = RealTimeMovingAverage(window_size=window)
-        self.magY_sma = RealTimeMovingAverage(window_size=window)
-        self.magZ_sma = RealTimeMovingAverage(window_size=window)
+        self.magX_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.magY_sma = RealTimeMovingAverage(window_size=IMU_window)
+        self.magZ_sma = RealTimeMovingAverage(window_size=IMU_window)
+
+        self.emg_ch1_sma = RealTimeMovingAverage(window_size=EMG_window)
+        self.emg_ch2_sma = RealTimeMovingAverage(window_size=EMG_window)
 
     def setup_filters(self):
         self.Fs = 1000
         # Bandpass, bandstop, and lowpass filter settings
         Fco_bp = [10, self.Fs * 0.45]
         Fco_bs = [47, 53]
-        Fco_lp = 50
+        Fco_lp = 350
         order_bp = 10
         order_lp = 4
         order_bs = 6
@@ -110,9 +132,13 @@ class Main(QtWidgets.QMainWindow):
         self.calibration_service.calibrationComplete.connect(self.update_calibration_button)
         self.serial_handler.calibration_signal.connect(self.calibration_service.handle_calibration_buffer)
         self.calibration_service.errorBiasUpdate.connect(self.update_error_bias)
+        self.calibration_service.coefficientsUpdate.connect(self.update_coefficients)
 
     def update_error_bias(self, bias):
         self.errorBias = bias
+
+    def update_coefficients(self, coefficients):
+        self.coefficients = coefficients
 
     def update_calibration_message(self, title, message):
         QtWidgets.QMessageBox.information(self, title, message)
@@ -220,8 +246,16 @@ class Main(QtWidgets.QMainWindow):
         timestampMsg = Time()
         timestampMsg.sec = timestamp_sec
         timestampMsg.nanosec = timestamp_nsec
-
+        
         # EMG
+        # Create objects for raw and filtered EMG data
+        emg_raw_msg = Vector3()
+        emg_filtered_msg = Vector3()
+
+        # Assign raw values
+        emg_raw_msg.x = ch1
+        emg_raw_msg.y = ch2
+
         # Step 1: Bandpass filter
         bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [ch1], zi=self.zf_bp_ch1)
         bp_ch2, self.zf_bp_ch2 = lfilter(self.b_bp, self.a_bp, [ch2], zi=self.zf_bp_ch2)
@@ -234,18 +268,16 @@ class Main(QtWidgets.QMainWindow):
         lp_ch1, self.zf_lp_ch1 = lfilter(self.b_lp, self.a_lp, bs_ch1, zi=self.zf_lp_ch1)
         lp_ch2, self.zf_lp_ch2 = lfilter(self.b_lp, self.a_lp, bs_ch2, zi=self.zf_lp_ch2)
 
-        # Create objects for raw and filtered EMG data
-        emg_raw_msg = Vector3()
-        emg_filtered_msg = Vector3()
-
-        # Assign raw values
-        emg_raw_msg.x = ch1
-        emg_raw_msg.y = ch2
+        # Step 4: Simple moving average
+        sma_ch1 = self.emg_ch1_sma.update(lp_ch1)
+        sma_ch2 = self.emg_ch2_sma.update(lp_ch2)
 
         # Assign filtered values
-        emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
-        emg_filtered_msg.y = lp_ch2[0]  # Same here
+        emg_filtered_msg.x = sma_ch1[0]#lp_ch1[0]  # lfilter returns a list, take the first element
+        emg_filtered_msg.y = sma_ch2[0]#lp_ch2[0]  # Same here
 
+
+        # IMU
         # Moving average filter on incoming data
         sma_accX = self.accX_sma.update(accX)
         sma_accY = self.accX_sma.update(accY)
@@ -259,31 +291,48 @@ class Main(QtWidgets.QMainWindow):
         sma_magY = self.magX_sma.update(magY)
         sma_magZ = self.magX_sma.update(magZ)
 
-        # IMU Error correction
-        corrected_accX = sma_accX - self.errorBias[0]
-        corrected_accY = sma_accY - self.errorBias[1]
-        corrected_accZ = sma_accZ - self.errorBias[2]
 
-        corrected_gyroX = sma_gyroX - self.errorBias[3]
-        corrected_gyroY = sma_gyroY - self.errorBias[4]
-        corrected_gyroZ = sma_gyroZ - self.errorBias[5]
+        a = 1#1.030177513657288994
+
+
+        corrected_accX = sma_accX - (self.errorBias[0] * a)
+        corrected_accY = sma_accY - (self.errorBias[1] * a)
+        corrected_accZ = sma_accZ - (self.errorBias[2] * a)
+
+        corrected_gyroX = sma_gyroX - (self.errorBias[3] * a)
+        corrected_gyroY = sma_gyroY - (self.errorBias[4] * a)
+        corrected_gyroZ = sma_gyroZ - (self.errorBias[5] * a)
 
         corrected_magX = sma_magX - self.errorBias[6]
         corrected_magY = sma_magY - self.errorBias[7]
         corrected_magZ = sma_magZ    # No mag_z errorbias, since we did 2D calibration
 
-        print("Regular accX")         ## Debugging
-        print(accX)                   ## Debugging
-        print("SMA accX")             ## Debugging
-        print(corrected_accX)         ## Debugging
-        print("Error bias for accX")  ## Debugging
-        print(self.errorBias[0])      ## Debugging
+        # # Compute the time step since the last update
+        # current_timestamp = timestamp_sec + timestamp_nsec * 1e-9  # Convert to seconds
+        # if hasattr(self, 'previous_timestamp'):
+        #     dt = current_timestamp - self.previous_timestamp
+        # else:
+        #     dt = 0  # No previous timestamp, so assume zero (or some small value)
+        # self.previous_timestamp = current_timestamp
+
+        # # Update the UKF with corrected gyroscope data along the Y-axis
+        # estimated_angle = self.ukf.update(corrected_gyroY, dt)
+
+        # corrected_accX = accX
+        # corrected_accY = accY
+        # corrected_accZ = accZ
+        # corrected_gyroX = gyroX
+        # corrected_gyroY = gyroY
+        # corrected_gyroZ = gyroZ
+        # corrected_magX = magX
+        # corrected_magY = magY
+        # corrected_magZ = magZ
 
         # IMU
         accMsg = Vector3()
         gyroMsg = Vector3()
         magMsg = Vector3()
-        
+
         accMsg.x = corrected_accX
         accMsg.y = corrected_accY
         accMsg.z = corrected_accZ
@@ -311,6 +360,7 @@ class CalibrationService(QtCore.QObject):
     calibrationProgress = pyqtSignal(int) # Remaining time in seconds
     calibrationMessage = pyqtSignal(str, str) # Title, message
     errorBiasUpdate = pyqtSignal(list)
+    coefficientsUpdate = pyqtSignal(dict)
 
     def __init__(self, node, serial_handler):
         super().__init__()
@@ -320,6 +370,14 @@ class CalibrationService(QtCore.QObject):
         self.calibration_static_complete = False
         self.calibration_buffer = []
         self.errorBias = [0, 0, 0, 0, 0, 0]
+        self.coefficients = {
+            'acc_x': None,
+            'acc_y': None,
+            'acc_z': None,
+            'gyro_x': None,
+            'gyro_y': None,
+            'gyro_z': None
+        }
 
     def handle_calibration_buffer(self, buffer):
         self.calibration_buffer = buffer
@@ -327,25 +385,24 @@ class CalibrationService(QtCore.QObject):
 
     def start_calibration(self):
         self.calibration_buffer.clear()
-        print("Buffer post clear: ")
-        print(len(self.calibration_buffer))
         self.calibrationComplete.emit(False) # Disable calibration button while calibrating
         self.calibrationInProgress.emit(True)
 
-        time.sleep(3)
-
         # Calculate average of accelerometer and gyro
         if self.calibration_static_complete == False:
-            self.calibrationChanged.emit("Static calibration!\nLeave the device level and stationary for 10 seconds", "blue")
-            QtCore.QTimer.singleShot(10000, self.complete_static_calibration) # Wait 10 seconds and then check if it is enough
+            self.calibrationChanged.emit("Static calibration!\nLeave the device level and stationary for 10 seconds.", "blue")
+            QtCore.QTimer.singleShot(10000, self.complete_static_calibration) # Wait 10 seconds and then complete calibration
 
         # HSI calibration for magnetometer
         elif self.calibration_static_complete == True:
             self.calibrationChanged.emit("Dynamic calibration!\nRotate the device slowly for 10 seconds.", "blue")
             QtCore.QTimer.singleShot(10000, self.complete_dynamic_calibration) # Wait 10 seconds and then complete calibration
 
+        else:
+            self.calibrationChanged.emit("An error may have occured!\nRestart the device and try again.", "red")
+
     def complete_static_calibration(self):
-        print("STATIC CALIBRATION COMPLETED!!!")  ## Debugging
+        print("Static calibration complete!")
         self.calibration_static_complete = True
 
         # Calculate average for calibration
@@ -367,15 +424,13 @@ class CalibrationService(QtCore.QObject):
             gyro_bias_z = sum(gyro_z) / len(gyro_z)
 
             self.errorBias[0:6] = [acc_bias_x, acc_bias_y, acc_bias_z, gyro_bias_x, gyro_bias_y, gyro_bias_z]
-            print(self.errorBias)  ## Debugging
-            print("Static SUM:")
-            print(sum(acc_x))
             self.calibrationChanged.emit("Static calibration complete", "orange")
 
-            self.start_calibration() # Start the dynamic calibration
-
+            time.sleep(3)
+            self.start_calibration()
         
     def complete_dynamic_calibration(self):
+        print("Dynamic calibration complete!")
         # Perform HSI calibration for the mag data
         if self.calibration_buffer:
             # Hard iron calibration
@@ -390,17 +445,19 @@ class CalibrationService(QtCore.QObject):
 
             # Notify the user
             self.calibrationChanged.emit("Dynamic calibration complete", "orange")
-            self.calibrationComplete.emit(True) # Enable calibration button after calibrating
-            self.currently_calibrating = False
-            self.calibrationInProgress.emit(False)
             self.errorBiasUpdate.emit(self.errorBias)
-            print("####################################")
-            print("###     Calibration complete!    ###")
-            print("####################################")
+
+            self.calibrationComplete.emit(True) # Enable calibration button after calibrating
+            self.calibrationInProgress.emit(False)
+
             print("")
             print("Error bias: \n")
             print(self.errorBias)
+
             self.calibrationChanged.emit("Calibration complete", "green")
+            print("####################################")
+            print("###     Calibration complete!    ###")
+            print("####################################")
 
 class Communicate(QtCore.QObject):
     # A class for configuring the EMG module and reading the data from it
@@ -412,38 +469,20 @@ class Communicate(QtCore.QObject):
         self.reading = False
         self.serial = serialObj
         self.node = node
-        self.buffer = deque()
         self.calibration_buffer = []
-        self.publish_rate = 0.2 # Seconds, meaining it will publish 5 times per second
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.publish_averaged_data)
-        self.timer.start(int(self.publish_rate * 1000)) # milliseconds, also .start required int
-        self.last_published_timestamp = 0
 
-    def publish_averaged_data(self):
-        if not self.buffer:
-            return
-
-        # Calculate average
-        average_data = [sum(x) / len(x) for x in zip(*self.buffer)]
-        self.buffer.clear()
-
-        # Create timestamp
-        current_time = self.node.get_clock().now()
-        timestamp_sec = current_time.seconds_nanoseconds()[0]
-        timestamp_nsec = current_time.seconds_nanoseconds()[1]
-        if timestamp_nsec != self.last_published_timestamp: # ensure that only 1 message is published per timestamp
-            self.data_signal.emit(timestamp_sec, timestamp_nsec, *average_data)
 
     def dataSendLoop(self):
         self.initialize_serial()
         gain = 12 # EMG gain 1,2,3,4,6,8,12
-
+#		      ADC Sensivitivty   (try removing)
         exgCalFactor = (((2.42 * 1000) / gain) / (pow(2, 23) - 1))
+        2420 / (2 ** 23 - 1)
 
         ddata = b""  # Use bytes literal for Python 3
         numbytes = 0
-        framesize = 29  # 1 byte packet type + 4 bytes timestamp + 6 bytes emg, 18 bytes imu (6x3 acc, gyro, mag)
+        framesize = 28#29  # 1 byte packet type + 4 bytes timestamp + 6 bytes emg, 18 bytes imu (6x3 acc, gyro, mag)
+
         # Sensitivity
         gyro_sensitivity = 131 # Based on MPU-9150 chip data from Invensense +-3 based on temperature, so shouldn't be a problem
         mag_sensitivity_xy = 1100 # Based on LSM303DLHC data from STMicroelectronics. Sensitivity based on +-1.3 field full-scale
@@ -467,15 +506,20 @@ class Communicate(QtCore.QObject):
                 numbytes = len(ddata)
 
                 packettype = struct.unpack('B', data[0:1])
+                (ts0, ts1,) = struct.unpack('BB', data[1:3])
+                (accx, accy, accz) = struct.unpack('HHH', data[3:9])
+                (gyrox, gyroy, gyroz) = struct.unpack('HHH', data[9:15])
+                (magx, magy, magz) = struct.unpack('>hhh', data[15:21])
+                ch1 = struct.unpack('>i', data[21:24] + b'\0')[0] >> 8 # 24 Bit size, so we add a null byte on the end 
+                ch2 = struct.unpack('>i', data[24:27] + b'\0')[0] >> 8 # and then shift the data 8 bits right to remove it again
 
-                #ts0, ts1, ts2, c1status = struct.unpack('BBBB', data[1:5])
-                #timestamp = ts0 + ts1 * 256 + ts2 * 65536
+                ch1 *= exgCalFactor
+                ch2 *= exgCalFactor
 
-                (accx, accy, accz) = struct.unpack('HHH', data[5:11])
-                (gyrox, gyroy, gyroz) = struct.unpack('HHH', data[11:17])
-                (magx, magy, magz) = struct.unpack('>hhh', data[17:23])
-                ch1 = struct.unpack('>i', data[23:26] + b'\0')[0] >> 8
-                ch2 = struct.unpack('>i', data[26:29] + b'\0')[0] >> 8
+                # Create timestamp
+                current_time = self.node.get_clock().now()
+                timestamp_sec = current_time.seconds_nanoseconds()[0]
+                timestamp_nsec = current_time.seconds_nanoseconds()[1]
 
                 # Conversions
                 # Convert raw data to voltage
@@ -484,26 +528,34 @@ class Communicate(QtCore.QObject):
                 voltage_z = (accz / adc_resolution) * reference_voltage
 
                 # Convert voltage to gs
-                accx = (voltage_x - zero_g_voltage) / sensitivity_v_per_g
-                accy = (voltage_y - zero_g_voltage) / sensitivity_v_per_g
-                accz = (voltage_z - zero_g_voltage) / sensitivity_v_per_g
+                accX = (voltage_x - zero_g_voltage) / sensitivity_v_per_g
+                accY = (voltage_y - zero_g_voltage) / sensitivity_v_per_g
+                accZ = (voltage_z - zero_g_voltage) / sensitivity_v_per_g
 
                 # Convert to degrees/sec
-                gyrox = (gyrox/gyro_sensitivity)
-                gyroy = (gyroy/gyro_sensitivity)
-                gyroz = (gyroz/gyro_sensitivity)
+                gyroX = (gyrox/gyro_sensitivity)
+                gyroY = (gyroy/gyro_sensitivity)
+                gyroZ = (gyroz/gyro_sensitivity)
 
                 # Convert to gs
-                magx = (magx / mag_sensitivity_xy)
-                magy = (magy / mag_sensitivity_xy)
-                magz = (magz / mag_sensitivity_z)
+                magX = (magx / mag_sensitivity_xy)
+                magY = (magy / mag_sensitivity_xy)
+                magZ = (magz / mag_sensitivity_z)
 
-                ch1 *= exgCalFactor
-                ch2 *= exgCalFactor
+                #accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz
+                #accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ
 
-                self.buffer.append([ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz])
-                self.calibration_buffer.append([accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz])
+                self.calibration_buffer.append([accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ])
+
+                self.data_signal.emit(timestamp_sec, timestamp_nsec, ch1, ch2, accx, accy, accz, gyrox, gyroy, gyroz, magx, magy, magz)
                 self.calibration_signal.emit(self.calibration_buffer)
+
+                #print("ch2: ")
+                #print(ch2)
+                #print(magY)
+                #print(magZ)
+                # GyroZ has issues. goes below 0 and restarts at 500
+
 
         except KeyboardInterrupt:
             self.serial.write(struct.pack('B', 0x20))
@@ -560,9 +612,14 @@ class Communicate(QtCore.QObject):
         # Send the set sensors command (IMU and EMG)
         print("")
         print("Sending sensor commands for IMU and EMG communication...")
-        self.serial.write(struct.pack('BBBBB', 0x08, 0xE0, 0x10, 0x00, 0x00)) # 0x08 is command byte, 0xE0 enables IMU, 0x10 enables EMG unit, 0x00 is trailing.
+        self.serial.write(struct.pack('BBBB', 0x08, 0xF0, 0x00, 0x00)) # 0x08 is command byte, 0x10 enables EMG, 0x00 is trailing.  0xF0 Enables low noise accel, gyro, mag, exg
+        #self.serial.write(struct.pack('BBBB', 0x08, 0xE0, 0x00, 0x00)) # 0x08 is command byte, 0xE0 enables IMU, 0x00 is trailing.
         self.wait_for_ack()
         time.sleep(2)
+
+        # send the set sampling rate command
+        self.serial.write(struct.pack('BBB', 0x05, 0x80, 0x02)) #51.2Hz (32768/640=51.2Hz: 640 -> 0x0280; has to be done like this for alignment reasons.)
+        self.wait_for_ack()
 
         if(srNumber == 47 and srRev >= 4):
             chip1Config[1] |= 8 # Config byte for CHIP1 in SR47-4
@@ -617,6 +674,56 @@ class RealTimeMovingAverage:
         self.sum += new_value # Add newest data to the sum
 
         return self.sum / len(self.data) # Return average of the window
+
+
+class UnscentedKalmanFilter:
+    def __init__(self, dt, process_noise_std, measurement_noise_std):
+        # dt: Time step between measurements
+        # process_noise_std: Standard deviation of the process noise
+        # measurement_noise_std: Standard deviation of the measurement noise
+        
+        # Define the sigma points
+        sigma_points = MerweScaledSigmaPoints(n=1, alpha=0.1, beta=2.0, kappa=0)
+
+        # Initialize UKF
+        self.ukf = UKF(dim_x=1, dim_z=1, fx=self.fx, hx=self.hx, dt=dt, points=sigma_points)
+
+        # Process noise
+        self.ukf.Q = np.diag([process_noise_std**2])
+
+        # Measurement noise
+        self.ukf.R = np.diag([measurement_noise_std**2])
+
+        # Initial state
+        self.ukf.x = np.array([0.]) # Assumption that the arm starts outstretched at 0 degrees
+
+        # Initial covariance
+        self.ukf.P *= 0.2
+
+    def fx(self, x, dt):
+        # State transition function
+        # Here, x[0] would be the current angle estimate
+        # Since we're using gyroscope data to predict the next state, the actual update happens in the update step
+        return x
+    
+    def hx(self, x):
+        # Measurement function
+        # Maps state space (angle) into measurement space, which in this simplified case is the same
+        return x
+    
+    def update(self, gyro_y, dt):
+        # gyro_y: Angular velocity around the Y-axis from the gyroscope (in degrees per second)
+        # dt: Time step since the last update
+        
+        # Update the state with the gyroscope measurement
+        self.ukf.predict(dt=dt)  # Predict the next state based on the current state
+        self.ukf.update(gyro_y)  # Update the state with the actual measurement
+        
+        return self.ukf.x[0]  # Return the current angle estimate
+    
+    def get_state(self):
+        # Returns the current state estimate
+        return self.ukf.x[0]
 
 
 class Application(QtWidgets.QApplication):

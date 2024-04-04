@@ -12,9 +12,10 @@ Currently, the custom_interfaces pkg is not used, as there was a problem with in
 - [x] Calibrate IMU and convert data to usable units
 - [ ] Gather good elbow dataset for EMG and IMU data
 - [ ] Train a machine learning algorithm... LDA... SVM... ?
-- [ ] Integrate encoder to estimate angle of the arm
-- [ ] Integrate DC to actuate arm based on the model
+- [ ] Integrate encoder or potentiometer to estimate angle of the arm
+- [ ] Integrate DC motor to actuate arm based on the model
 - [ ] Make it work on a microcontroller
+- [ ] Implmenet everything together to work with the exoskeleton
 
 
 ### Acquisition of EMG and IMU data
@@ -47,3 +48,4 @@ Records the timestamp, emg channel 1 and 2, accelerometer x,y,z, gyroscope x,y,z
 'python3 plot_data'
 
 Plots the data from the 'data_file.csv'. Must be in the directory when running.
+

@@ -1,6 +1,5 @@
 [console_scripts]
-emg_aq = shimmer_emg.emg_aq:main
-imu_aq = shimmer_emg.imu_aq:main
+data_acquisition = shimmer_emg.data_acquisition:main
 imu_emg_aq = shimmer_emg.imu_emg_aq:main
 plot_data = shimmer_emg.plot_data:main
 record_data = shimmer_emg.record_data:main
