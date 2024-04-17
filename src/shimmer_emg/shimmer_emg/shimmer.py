@@ -701,6 +701,8 @@ class Shimmer3:
 
                     start_index = 4
                     tmp_array = []
+                    tmp_acc_array = []
+                    tmp_mag_array = []
                     for i in range(self._num_channels):
                         current_channel = self._channels[i]
                         current_channel_data_type = util.CHANNEL_DATA_TYPE[current_channel]
@@ -714,7 +716,7 @@ class Shimmer3:
                         elif current_channel_data_type == "i16":
                             raw_data = struct.unpack("<H", interested_data)[0]
                         elif current_channel_data_type == "i16*":
-                            raw_data = struct.unpack(">H", interested_data)[0]
+                            raw_data = struct.unpack(">h", interested_data)[0]   # Changed from >H to >i
                         elif current_channel_data_type == "u16":
                             raw_data = struct.unpack("H", interested_data)[0]
                         elif current_channel_data_type == "u24":
@@ -733,20 +735,46 @@ class Shimmer3:
                         if not calibrated:
                             packet.append(raw_data)
                         else:
-                            if current_channel == util.CHANNEL_WIDE_ACC_X or current_channel == util.CHANNEL_LOW_ACC_X or \
-                                    current_channel == util.CHANNEL_GYRO_X or current_channel == util.CHANNEL_MAG_X:
-                                tmp_array.append(raw_data)
-                            elif current_channel == util.CHANNEL_WIDE_ACC_Y or current_channel == util.CHANNEL_LOW_ACC_Y or \
-                                    current_channel == util.CHANNEL_GYRO_Y or current_channel == util.CHANNEL_MAG_Y:
-                                tmp_array.append(raw_data)
-                            elif current_channel == util.CHANNEL_WIDE_ACC_Z or current_channel == util.CHANNEL_LOW_ACC_Z or \
-                                    current_channel == util.CHANNEL_GYRO_Z or current_channel == util.CHANNEL_MAG_Z:
-                                tmp_array.append(raw_data)
-                                # ora abbiamo x, y e z tutti raw in una lista [x, y, z]
-                                # dobbiamo capire che sensore è in generale, stavolta precisamente
-                                if current_channel == util.CHANNEL_LOW_ACC_Z:
-                                    calibrated_data = self.calibrate_low_acc_vector(tmp_array)
-                                    packet = packet + calibrated_data
+                            if current_channel in [util.CHANNEL_LOW_ACC_X, util.CHANNEL_LOW_ACC_Y, util.CHANNEL_LOW_ACC_Z]:
+                                tmp_acc_array.append(raw_data)
+
+                                if len(tmp_acc_array) == 3:
+                                    calibrated_data = self.calibrate_low_acc_vector(tmp_acc_array)
+                                    packet += calibrated_data
+                                    tmp_acc_array = []
+                                    #print("tmp_acc_array is length 3!")
+                                    #print(packet)
+                            
+                            elif current_channel in [util.CHANNEL_MAG_X, util.CHANNEL_MAG_Y, util.CHANNEL_MAG_Z]:
+                                tmp_mag_array.append(raw_data)
+
+                                if len(tmp_mag_array) == 3:
+                                    calibrated_data = self.fix_magnetometer_overflow(tmp_mag_array)
+                                    packet += calibrated_data
+                                    tmp_mag_array = []
+                                    print("tmp_mag_array is length 3!")
+                                    print(packet)
+
+
+                            # if current_channel == util.CHANNEL_WIDE_ACC_X or current_channel == util.CHANNEL_LOW_ACC_X or \
+                            #         current_channel == util.CHANNEL_GYRO_X or current_channel == util.CHANNEL_MAG_X:
+                            #     tmp_array.append(raw_data)
+                            # elif current_channel == util.CHANNEL_WIDE_ACC_Y or current_channel == util.CHANNEL_LOW_ACC_Y or \
+                            #         current_channel == util.CHANNEL_GYRO_Y or current_channel == util.CHANNEL_MAG_Y:
+                            #     tmp_array.append(raw_data)
+                            # elif current_channel == util.CHANNEL_WIDE_ACC_Z or current_channel == util.CHANNEL_LOW_ACC_Z or \
+                            #         current_channel == util.CHANNEL_GYRO_Z or current_channel == util.CHANNEL_MAG_Z:
+                            #     tmp_array.append(raw_data)
+                            #     # ora abbiamo x, y e z tutti raw in una lista [x, y, z]
+                            #     # dobbiamo capire che sensore è in generale, stavolta precisamente
+                            #     if current_channel == util.CHANNEL_LOW_ACC_Z:
+                            #         calibrated_data = self.calibrate_low_acc_vector(tmp_array)
+                            #         packet = packet + calibrated_data
+
+                            #     if current_channel in (util.CHANNEL_MAG_X, util.CHANNEL_MAG_Y, util.CHANNEL_MAG_Z):
+                            #         calibrated_data = self.fix_magnetometer_overflow(tmp_array)
+                            #         packet.append(calibrated_data)
+
                                 else:
                                     # print("read_data -> not supported yet")
                                     packet = packet + tmp_array
@@ -2043,6 +2071,30 @@ class Shimmer3:
             if self.debug:
                 print("set_active_gsr_mu -> ERROR: not a valid measurement unit: ", new_mu)
             return False
+
+    def fix_magnetometer_overflow(self, raw_data):
+        """
+        Process raw magnetometer readings for X, Y, Z axes, preventing overflow by maxing out
+        the value at the int16 limits for each.
+
+        :param raw_data_list: List of the raw magnetometer readings as signed 16-bit integers.
+        :return: The processed list, with overflow corrected for each axis.
+        """
+        INT16_MAX = 32767
+        INT16_MIN = -32768
+
+        # Process each value in the list to correct overflow conditions
+        processed_list = []
+        for value in raw_data:
+            if value > INT16_MAX:
+                processed_list.append(INT16_MAX)
+            elif value < INT16_MIN:
+                processed_list.append(INT16_MIN)
+            else:
+                processed_list.append(value)
+        
+        return processed_list
+
 
     def calibrate_low_acc_vector(self, raw_data):
         """

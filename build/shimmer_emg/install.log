@@ -6,8 +6,8 @@
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/util.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__init__.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/data_acquisition.py
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/rp_enable_dc.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/record_data.py
-/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/testEMG.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/shimmer.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/imu_emg_aq.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/plot_data.cpython-310.pyc
@@ -16,8 +16,8 @@
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/util.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/__init__.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/data_acquisition.cpython-310.pyc
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/rp_enable_dc.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/record_data.cpython-310.pyc
-/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/testEMG.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/share/ament_index/resource_index/packages/shimmer_emg
 /home/william/repos/control_system_ws/install/shimmer_emg/share/shimmer_emg/package.xml
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info/SOURCES.txt

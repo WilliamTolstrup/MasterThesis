@@ -15,8 +15,8 @@ shimmer_emg/data_acquisition.py
 shimmer_emg/imu_emg_aq.py
 shimmer_emg/plot_data.py
 shimmer_emg/record_data.py
+shimmer_emg/rp_enable_dc.py
 shimmer_emg/shimmer.py
-shimmer_emg/testEMG.py
 shimmer_emg/train_svm.py
 shimmer_emg/util.py
 test/test_copyright.py

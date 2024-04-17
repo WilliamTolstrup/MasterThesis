@@ -7,7 +7,8 @@ from scipy.signal import butter, lfilter, lfilter_zi
 import rclpy
 from rclpy.node import Node
 import time
-
+import numpy as np
+from std_msgs.msg import Float32MultiArray
 
 class ShimmerDataNode(Node):
     def __init__(self):
@@ -22,6 +23,23 @@ class ShimmerDataNode(Node):
         # IMU
         self.pubLnAcc       = self.create_publisher(Vector3, '/imu/ln_acc', 10) # Low noise accelerometer
 
+        # Features
+        self.pubFeatures    = self.create_publisher(Float32MultiArray, '/shimmer/features', 10)
+
+        # Window segmentation related
+        self.Fs = 500 # Sampling rate
+        self.window_size_samples = int(self.Fs * 0.16) # 80 ms window size
+        self.window_overlap_samples = int(self.window_size_samples * 0.5) # 50% overlap
+
+        # Init buffers and window counter
+        self.emg_raw_buffer_ch1 = []
+        self.emg_raw_buffer_ch2 = []
+        self.emg_filtered_buffer_ch1 = []
+        self.emg_filtered_buffer_ch2 = []
+        self.acc_buffer_x = []
+        self.acc_buffer_y = []
+        self.acc_buffer_z = []
+        self.window_counter = 0
 
         self.setup_filters() # EMG filters
         self.shimmer3 = self.setup_shimmer()
@@ -35,6 +53,7 @@ class ShimmerDataNode(Node):
         shimmer3 = shimmer.Shimmer3(TYPE, debug=True)
         shimmer3.connect(com_port=PORT, write_rtc=True, update_all_properties=True, reset_sensors=True)
         shimmer3.set_sampling_rate(500.0)
+        #shimmer3.set_mag_rate(2) # 2 = 50 Hz
         shimmer3.set_enabled_sensors(util.SENSOR_LOW_NOISE_ACCELEROMETER, util.SENSOR_ExG1_24BIT)
         gain = util.ExG_GAIN_12  # gain
         shimmer3.exg_send_emg_settings(gain)
@@ -70,8 +89,28 @@ class ShimmerDataNode(Node):
         self.zf_bs_ch2 = self.zf_bs_ch1.copy()
         self.zf_lp_ch2 = self.zf_lp_ch1.copy()
 
+    # Feature functions
+
+    def mav(self, signal):                     # Mean Absolute Value
+        return np.mean(np.abs(signal))
+    
+    def rms(self, signal):                           # Root Mean Square Error
+        signal_array = np.array(signal) # numpy array is needed for element-wise operations
+        return np.sqrt(np.mean(signal_array**2))
+    
+    def sd(self, signal):                            # Standard deviation
+        return np.std(signal)
+    
+    def wl(self, signal):                            # Wavelength
+        return np.sum(np.abs(np.diff(signal)))
+
     def sendDataLoop(self):
         try:
+            timestampMsg = Vector3()
+            emg_raw_msg      = Vector3()
+            emg_filtered_msg = Vector3()
+            ln_accMsg = Vector3()
+            featureMsg = Float32MultiArray()
             while True:
                 n_of_packets, packets = self.shimmer3.read_data_packet_extended(calibrated=True)
                 if n_of_packets > 0:
@@ -81,24 +120,9 @@ class ShimmerDataNode(Node):
                     # Now, unpack the values from 'data'
                     ts, ts_start, ts_current, calibrated_ln_accx, calibrated_ln_accy, calibrated_ln_accz, calibrated_ch1, calibrated_ch2 = raw_data
 
-
-
                     #########################################################
                     ###                  DATA PROCESSING                  ###
                     #########################################################
-
-                    # Timestamp
-                    timestampMsg = Vector3()
-                    timestampMsg.x = ts_start
-                    timestampMsg.y = ts_current
-                    
-                    # EMG
-                    emg_raw_msg      = Vector3()
-                    emg_filtered_msg = Vector3()
-
-                    # Assign unfiltered values
-                    emg_raw_msg.x = float(calibrated_ch1)
-                    emg_raw_msg.y = float(calibrated_ch2)
 
                     # Step 1: Bandpass filter
                     bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [calibrated_ch1], zi=self.zf_bp_ch1)
@@ -116,16 +140,66 @@ class ShimmerDataNode(Node):
                     emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
                     emg_filtered_msg.y = lp_ch2[0]  # Same here
 
+                    # Assign unfiltered values
+                    emg_raw_msg.x = float(calibrated_ch1)
+                    emg_raw_msg.y = float(calibrated_ch2)
 
-                    # IMU
-                    ln_accMsg = Vector3()
-                    wr_accMsg = Vector3()
-                    gyroMsg = Vector3()
-                    magMsg = Vector3()
-
+                    # Assign accel values
                     ln_accMsg.x = float(calibrated_ln_accx)
                     ln_accMsg.y = float(calibrated_ln_accy)
                     ln_accMsg.z = float(calibrated_ln_accz)
+
+                    # Timestamp
+                    timestampMsg.x = ts_start
+                    timestampMsg.y = ts_current
+
+                    #########################################################
+                    ###            DATA ACCUMULATION FOR WINDOW           ###
+                    #########################################################
+
+                    self.emg_raw_buffer_ch1.append(calibrated_ch1)
+                    self.emg_raw_buffer_ch2.append(calibrated_ch2)
+                    self.emg_filtered_buffer_ch1.append(lp_ch1)
+                    self.emg_filtered_buffer_ch2.append(lp_ch2)
+                    self.acc_buffer_x.append(calibrated_ln_accx)
+                    self.acc_buffer_y.append(calibrated_ln_accy)
+                    self.acc_buffer_z.append(calibrated_ln_accz)
+
+                    self.window_counter += 1
+
+                    if self.window_counter >= self.window_size_samples:
+                        # Compute features for the window
+                        
+                        emg_raw_features      = [self.mav(self.emg_raw_buffer_ch1),      self.mav(self.emg_raw_buffer_ch2),      self.rms(self.emg_raw_buffer_ch1),      self.rms(self.emg_raw_buffer_ch2),      self.sd(self.emg_raw_buffer_ch1),      self.sd(self.emg_raw_buffer_ch2),      self.wl(self.emg_raw_buffer_ch1),      self.wl(self.emg_raw_buffer_ch2)]
+                        emg_filtered_features = [self.mav(self.emg_filtered_buffer_ch1), self.mav(self.emg_filtered_buffer_ch2), self.rms(self.emg_filtered_buffer_ch1), self.rms(self.emg_filtered_buffer_ch2), self.sd(self.emg_filtered_buffer_ch1), self.sd(self.emg_filtered_buffer_ch2), self.wl(self.emg_filtered_buffer_ch1), self.wl(self.emg_filtered_buffer_ch2)]
+                        imu_features          = [self.mav(self.acc_buffer_x), self.mav(self.acc_buffer_y), self.mav(self.acc_buffer_z)]
+
+                        print("Features: ")
+                        print(emg_raw_features)
+                        print(emg_filtered_features)
+                        print(imu_features)
+
+                        # Slide the window
+                        # self.window_overlap_samples is half the window_size_samples, so we keep half of the window.
+                        start_index = self.window_size_samples - self.window_overlap_samples
+                        self.emg_raw_buffer_ch1 = self.emg_raw_buffer_ch1[start_index:]
+                        self.emg_raw_buffer_ch2 = self.emg_raw_buffer_ch2[start_index:]
+                        self.emg_filtered_buffer_ch1 = self.emg_filtered_buffer_ch1[start_index:]
+                        self.emg_filtered_buffer_ch2 = self.emg_filtered_buffer_ch2[start_index:]
+                        self.acc_buffer_x = self.acc_buffer_x[start_index:]
+                        self.acc_buffer_y = self.acc_buffer_y[start_index:]
+                        self.acc_buffer_z = self.acc_buffer_z[start_index:]
+                        self.window_counter -= self.window_overlap_samples
+
+                        #########################################################
+                        ###                  PUBLISH FEATURES                 ###
+                        #########################################################
+
+                        # emg_raw_mav_ch1, emg_raw_mav_ch2, emg_raw_rms_ch1, emg_raw_rms_ch2, emg_raw_sd_ch1, emg_raw_sd_ch2, emg_raw_wl_ch1, emg_raw_wl_ch1,    emg_filtered_mav_ch1, emg_filtered_mav_ch2, emg_filtered_rms_ch1, emg_filtered_rms_ch2, emg_filtered_sd_ch1, emg_filtered_sd_ch2, emg_filtered_wl_ch1, emg_filtered_wl_ch1,    acc_mav_x, acc_mav_y, acc_mav_z
+                        # Total 19 features (8,8,3)
+                        featureMsg.data = emg_raw_features + emg_filtered_features + imu_features
+                        self.pubFeatures.publish(featureMsg)
+
                     
                     # Publish
                     self.pubTimestamp.publish(timestampMsg)
@@ -147,28 +221,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-
-"""
-
-[281759, 1711539296.7906246, 1711539296.7906246, 2812, 1926, 1723, 45, 75, 23, 7368, 1184, 62176, 65281, 65321, 115, 128, 689671, 689671]
-[281887, 1711539296.7906246, 1711539296.7945309, 2813, 1927, 1724, 48, 53, 7,  7364, 1132, 62204, 65281, 65321, 115, 128, 689927, 689927]
-[282655, 1711539296.7906246, 1711539296.8179684, 2815, 1926, 1724, 25, 37, 18, 7332, 1176, 62220, 65277, 65329, 119, 128, 689671, 689671]
-[283039, 1711539296.7906246, 1711539296.829687,  2812, 1925, 1727, 41, 41, 10, 7336, 1184, 62188, 65281, 65323, 113, 128, 689415, 689415]
-[283551, 1711539296.7906246, 1711539296.845312,  2814, 1925, 1726, 28, 25, 31, 7320, 1204, 62204, 65276, 65333, 118, 128, 689415, 689415]
-[284063, 1711539296.7906246, 1711539296.860937,  2811, 1927, 1723, 46, 38, 16, 7320, 1180, 62136, 65280, 65326, 118, 128, 689927, 689927]
-[284447, 1711539296.7906246, 1711539296.8726559, 2811, 1930, 1720, 64, 45, 26, 7272, 1160, 62144, 65290, 65330, 123, 128, 690695, 690695]
-[284959, 1711539296.7906246, 1711539296.8882809, 2811, 1929, 1719, 65, 54, 56, 7308, 1176, 62160, 65288, 65329, 116, 128, 690439, 690439]
-[285471, 1711539296.7906246, 1711539296.9039059, 2812, 1927, 1721, 38, 37, 22, 7320, 1168, 62160, 65281, 65328, 115, 128, 689927, 689927]
-[285855, 1711539296.7906246, 1711539296.9156246, 2813, 1926, 1721, 46, 17, 17, 7304, 1204, 62188, 65278, 65332, 118, 128, 689671, 689671]
-[286623, 1711539296.7906246, 1711539296.939062,  2812, 1920, 1724, 81, 21, 11, 7316, 1276, 62156, 65284, 65327, 115, 128, 688135, 688135]
-
-[359471, 1711539541.7986135, 1711539541.7986135, 3.65, 8.61, 3.90, 91, 9, 65528, 58240, 2680, 63096, 306, 65264, 156, 9.385572201280459, 9.385572201280459]
-[264798, 1711543076.5425928, 1711543077.5992334, 1.39, -3.2, 9.48, 32, 73, 17,     2552, 808, 57784, 65458, 65331, 264, 15.293800071136166, 15.293800071136166]
-
-
-
-
-
-"""

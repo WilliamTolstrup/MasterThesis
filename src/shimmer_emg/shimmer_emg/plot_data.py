@@ -10,11 +10,11 @@ data = pd.read_csv('data_file.csv')
 
 # Determine unique states for coloring
 unique_states = data['state'].unique()
-state_colors = {'rest': 'gray', 'flexion': 'green', 'extension': 'blue'}
+state_colors = {'rest': 'white', 'flexion': 'green', 'static hold': 'grey', 'extension': 'blue', 'other': 'red'}
 
 
 # Plotting
-fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+fig, axs = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
 fig.suptitle('EMG and IMU Data Over Time')
 
 def plot_shaded_states(ax):
@@ -54,7 +54,13 @@ axs[2].set_ylabel('Low Noise Accel')
 axs[2].legend()
 plot_shaded_states(axs[2])
 
-
+# Some features
+axs[3].plot(data['timestamp'].values, data['emg_raw_mav_ch1'].values, label='MAV Raw Ch1')
+axs[3].plot(data['timestamp'].values, data['emg_filtered_mav_ch1'].values, label='MAV Filtered Ch1')
+axs[3].plot(data['timestamp'].values, data['acc_mav_x'].values, label='MAV Acc X')
+axs[3].set_ylabel('MAV')
+axs[3].legend()
+plot_shaded_states(axs[2])
 
 # Set common labels
 for ax in axs:

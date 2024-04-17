@@ -6,37 +6,16 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import matplotlib.pyplot as plt
+import joblib
 
 # Load the dataset
 df = pd.read_csv('data_file.csv')
 
-# Functions to calculate features
-def mean_absolute_value(signal):
-    return np.mean(np.abs(signal))
-
-def zero_crossings(signal):
-    return ((signal[:-1] * signal[1:]) < 0).sum()
-
-# Calculate EMG features for each row
-df['emg_mav_ch1'] = df['emg_raw_ch1'].apply(mean_absolute_value)
-df['emg_mav_ch2'] = df['emg_raw_ch2'].apply(mean_absolute_value)
-df['emg_zc_ch1'] = df['emg_raw_ch1'].apply(zero_crossings)
-df['emg_zc_ch2'] = df['emg_raw_ch2'].apply(zero_crossings)
-
-# Calculate EMG features on filtered data for each row
-df['emg_mav_ch1_filtered'] = df['emg_filtered_ch1'].apply(mean_absolute_value)
-df['emg_mav_ch2_filtered'] = df['emg_filtered_ch2'].apply(mean_absolute_value)
-df['emg_zc_ch1_filtered'] = df['emg_filtered_ch1'].apply(zero_crossings)
-df['emg_zc_ch2_filtered'] = df['emg_filtered_ch2'].apply(zero_crossings)
-
-# Calculate magnitude for accelerometer
-accel_cols = ['accelerometer_x', 'accelerometer_y', 'accelerometer_z']
-df['acc_mag'] = df.apply(lambda row: np.sqrt(sum(row[col]**2 for col in accel_cols)), axis=1)
 
 # Select features and target variable
-X = df[['emg_mav_ch1', 'emg_mav_ch2', 'emg_zc_ch1', 'emg_zc_ch2', 
-        'emg_mav_ch1_filtered', 'emg_mav_ch2_filtered', 'emg_zc_ch1_filtered', 'emg_zc_ch2_filtered',
-        'acc_mag']]
+X = df[['emg_raw_mav_ch1', 'emg_raw_mav_ch2', 'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 'emg_raw_wl_ch1', 'emg_raw_wl_ch2',
+        'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 'emg_filtered_wl_ch1', 'emg_filtered_wl_ch1',
+        'acc_mav_x', 'acc_mav_y', 'acc_mav_z']]
 y = df['state']
 
 # Split the dataset into training and test sets
@@ -52,8 +31,11 @@ lda = LDA()
 lda.fit(X_train_scaled, y_train)
 
 # Train an SVM model
-svm = SVC(kernel='linear')
+svm = SVC(kernel='sigmoid')
 svm.fit(X_train_scaled, y_train)
+
+# Save the SVM model
+#joblib.dump(svm, 'svm_model.pk1')
 
 # Predictions and Evaluations
 y_pred_lda = lda.predict(X_test_scaled)

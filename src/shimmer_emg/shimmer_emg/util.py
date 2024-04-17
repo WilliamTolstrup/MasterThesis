@@ -275,9 +275,9 @@ CHANNEL_DATA_TYPE = {
     "Wide Noise Accelerometer X": "i16",
     "Wide Noise Accelerometer Y": "i16",
     "Wide Noise Accelerometer Z": "i16",
-    "Magnetometer X": "i16",
-    "Magnetometer Y": "i16",
-    "Magnetometer Z": "i16",
+    "Magnetometer X": "i16*", # mag data changed to *
+    "Magnetometer Y": "i16*",
+    "Magnetometer Z": "i16*",
     "Gyroscope X": "i16*",  # with * means Big Endian -> it should be readed in inverse order
     "Gyroscope Y": "i16*",
     "Gyroscope Z": "i16*",
