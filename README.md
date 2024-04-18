@@ -10,16 +10,22 @@ Currently, the custom_interfaces pkg is not used, as there was a problem with in
 
 - [x] Acquire EMG and IMU data simultaneously
 - [x] Calibrate IMU and convert data to usable units
-- [ ] Gather good elbow dataset for EMG and IMU data
-- [ ] Train a machine learning algorithm... LDA... SVM... ?
+- [x] Gather good elbow dataset for EMG and IMU data
+- [x] Train a machine learning algorithm  (SVM) on the data
 - [ ] Integrate encoder or potentiometer to estimate angle of the arm
 - [ ] Integrate DC motor to actuate arm based on the model
 - [ ] Make it work on a microcontroller
 - [ ] Implmenet everything together to work with the exoskeleton
 
 
+### Bluetooth setup
+The bluetooth setup is a bit different depending on if you're connecting from a laptop or through SSH to a raspberry pi.
+
+#### Laptop
+To connect the shimmer device to the laptop, make sure you have the blueman bluetooth manager installed. 
+
 ### Acquisition of EMG and IMU data
-'ros2 run shimmer_emg imu_emg_aq.py'
+'ros2 run shimmer_emg data_acquisition'
 Combined script that connects with the shimmer3 unit and outputs both EMG and IMU data to ROS2 topics.
 
 To run:
