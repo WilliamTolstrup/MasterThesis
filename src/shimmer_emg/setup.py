@@ -23,7 +23,8 @@ setup(
         'imu_emg_aq = shimmer_emg.imu_emg_aq:main',
         'record_data = shimmer_emg.record_data:main',
         'plot_data = shimmer_emg.plot_data:main',
-        'data_acquisition = shimmer_emg.data_acquisition:main'
+        'data_acquisition = shimmer_emg.data_acquisition:main',
+        'rp_enable_dc = shimmer_emg.rp_enable_dc:main'
         ],
     },
 )
