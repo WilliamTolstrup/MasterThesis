@@ -1,0 +1,27 @@
+running egg_info
+writing ../../build/shimmer_emg/shimmer_emg.egg-info/PKG-INFO
+writing dependency_links to ../../build/shimmer_emg/shimmer_emg.egg-info/dependency_links.txt
+writing entry points to ../../build/shimmer_emg/shimmer_emg.egg-info/entry_points.txt
+writing requirements to ../../build/shimmer_emg/shimmer_emg.egg-info/requires.txt
+writing top-level names to ../../build/shimmer_emg/shimmer_emg.egg-info/top_level.txt
+reading manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+running build
+running build_py
+copying shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg
+running install
+running install_lib
+copying /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+byte-compiling /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/rp_enable_dc.py to rp_enable_dc.cpython-310.pyc
+Sorry: TabError: inconsistent use of tabs and spaces in indentation (rp_enable_dc.py, line 74)
+running install_data
+running install_egg_info
+removing '/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../../build/shimmer_emg/shimmer_emg.egg-info to /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info
+running install_scripts
+Installing data_acquisition script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+Installing imu_emg_aq script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+Installing plot_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+Installing record_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+Installing rp_enable_dc script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+writing list of installed files to '/home/pi/MasterThesis/build/shimmer_emg/install.log'

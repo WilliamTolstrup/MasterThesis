@@ -1,0 +1,69 @@
+[0.000000] (-) TimerEvent: {}
+[0.001486] (shimmer_emg) JobQueued: {'identifier': 'shimmer_emg', 'dependencies': OrderedDict()}
+[0.001616] (shimmer_emg) JobStarted: {'identifier': 'shimmer_emg'}
+[0.099085] (-) TimerEvent: {}
+[0.199789] (-) TimerEvent: {}
+[0.300627] (-) TimerEvent: {}
+[0.401188] (-) TimerEvent: {}
+[0.501763] (-) TimerEvent: {}
+[0.602365] (-) TimerEvent: {}
+[0.702923] (-) TimerEvent: {}
+[0.803539] (-) TimerEvent: {}
+[0.904191] (-) TimerEvent: {}
+[1.004859] (-) TimerEvent: {}
+[1.105815] (-) TimerEvent: {}
+[1.206443] (-) TimerEvent: {}
+[1.307041] (-) TimerEvent: {}
+[1.407641] (-) TimerEvent: {}
+[1.508265] (-) TimerEvent: {}
+[1.608821] (-) TimerEvent: {}
+[1.709372] (-) TimerEvent: {}
+[1.809925] (-) TimerEvent: {}
+[1.910504] (-) TimerEvent: {}
+[2.011120] (-) TimerEvent: {}
+[2.111728] (-) TimerEvent: {}
+[2.212390] (-) TimerEvent: {}
+[2.313347] (-) TimerEvent: {}
+[2.414362] (-) TimerEvent: {}
+[2.441359] (shimmer_emg) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/shimmer_emg', 'build', '--build-base', '/home/pi/MasterThesis/build/shimmer_emg/build', 'install', '--record', '/home/pi/MasterThesis/build/shimmer_emg/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/pi/MasterThesis/src/shimmer_emg', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'pi', 'SSH_CLIENT': '192.168.198.60 32970 22', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/home/pi/MasterThesis/install/custom_interfaces/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'MOTD_SHOWN': 'pam', 'HOME': '/home/pi', 'OLDPWD': '/home/pi', 'SSH_TTY': '/dev/pts/3', 'ROS_PYTHON_VERSION': '3', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLCON_PREFIX_PATH': '/home/pi/MasterThesis/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'pi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/pi/.local/bin:/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'XDG_RUNTIME_DIR': '/run/user/1000', 'LANG': 'C.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'AMENT_PREFIX_PATH': '/home/pi/MasterThesis/install/shimmer_emg:/home/pi/MasterThesis/install/custom_interfaces:/opt/ros/humble', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'PWD': '/home/pi/MasterThesis/build/shimmer_emg', 'SSH_CONNECTION': '192.168.198.60 32970 192.168.198.54 22', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/pi/MasterThesis/build/shimmer_emg/prefix_override:/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages:/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages:/home/pi/MasterThesis/install/custom_interfaces/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/home/pi/MasterThesis/install/custom_interfaces'}, 'shell': False}
+[2.514529] (-) TimerEvent: {}
+[2.615170] (-) TimerEvent: {}
+[2.715882] (-) TimerEvent: {}
+[2.816585] (-) TimerEvent: {}
+[2.917184] (-) TimerEvent: {}
+[3.017769] (-) TimerEvent: {}
+[3.118346] (-) TimerEvent: {}
+[3.218988] (-) TimerEvent: {}
+[3.319599] (-) TimerEvent: {}
+[3.362064] (shimmer_emg) StdoutLine: {'line': b'running egg_info\n'}
+[3.364585] (shimmer_emg) StdoutLine: {'line': b'writing ../../build/shimmer_emg/shimmer_emg.egg-info/PKG-INFO\n'}
+[3.365631] (shimmer_emg) StdoutLine: {'line': b'writing dependency_links to ../../build/shimmer_emg/shimmer_emg.egg-info/dependency_links.txt\n'}
+[3.366531] (shimmer_emg) StdoutLine: {'line': b'writing entry points to ../../build/shimmer_emg/shimmer_emg.egg-info/entry_points.txt\n'}
+[3.368148] (shimmer_emg) StdoutLine: {'line': b'writing requirements to ../../build/shimmer_emg/shimmer_emg.egg-info/requires.txt\n'}
+[3.368643] (shimmer_emg) StdoutLine: {'line': b'writing top-level names to ../../build/shimmer_emg/shimmer_emg.egg-info/top_level.txt\n'}
+[3.376013] (shimmer_emg) StdoutLine: {'line': b"reading manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'\n"}
+[3.380573] (shimmer_emg) StdoutLine: {'line': b"writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'\n"}
+[3.381202] (shimmer_emg) StdoutLine: {'line': b'running build\n'}
+[3.381636] (shimmer_emg) StdoutLine: {'line': b'running build_py\n'}
+[3.383730] (shimmer_emg) StdoutLine: {'line': b'copying shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg\n'}
+[3.385854] (shimmer_emg) StdoutLine: {'line': b'running install\n'}
+[3.387057] (shimmer_emg) StdoutLine: {'line': b'running install_lib\n'}
+[3.391459] (shimmer_emg) StdoutLine: {'line': b'copying /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg\n'}
+[3.395255] (shimmer_emg) StdoutLine: {'line': b'byte-compiling /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/rp_enable_dc.py to rp_enable_dc.cpython-310.pyc\n'}
+[3.398767] (shimmer_emg) StdoutLine: {'line': b'running install_data\n'}
+[3.399347] (shimmer_emg) StdoutLine: {'line': b'running install_egg_info\n'}
+[3.405622] (shimmer_emg) StdoutLine: {'line': b"removing '/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info' (and everything under it)\n"}
+[3.407176] (shimmer_emg) StdoutLine: {'line': b'Copying ../../build/shimmer_emg/shimmer_emg.egg-info to /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info\n'}
+[3.412567] (shimmer_emg) StdoutLine: {'line': b'running install_scripts\n'}
+[3.419738] (-) TimerEvent: {}
+[3.488722] (shimmer_emg) StdoutLine: {'line': b'Installing data_acquisition script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg\n'}
+[3.489531] (shimmer_emg) StdoutLine: {'line': b'Installing imu_emg_aq script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg\n'}
+[3.490270] (shimmer_emg) StdoutLine: {'line': b'Installing plot_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg\n'}
+[3.490957] (shimmer_emg) StdoutLine: {'line': b'Installing record_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg\n'}
+[3.491574] (shimmer_emg) StdoutLine: {'line': b'Installing rp_enable_dc script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg\n'}
+[3.493835] (shimmer_emg) StdoutLine: {'line': b"writing list of installed files to '/home/pi/MasterThesis/build/shimmer_emg/install.log'\n"}
+[3.520025] (-) TimerEvent: {}
+[3.599461] (shimmer_emg) CommandEnded: {'returncode': 0}
+[3.644665] (-) TimerEvent: {}
+[3.679489] (shimmer_emg) JobEnded: {'identifier': 'shimmer_emg', 'rc': 0}
+[3.682002] (-) EventReactorShutdown: {}

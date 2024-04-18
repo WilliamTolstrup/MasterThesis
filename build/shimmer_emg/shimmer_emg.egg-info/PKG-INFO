@@ -1,8 +1,12 @@
 Metadata-Version: 2.1
-Name: shimmer_emg
+Name: shimmer-emg
 Version: 0.0.0
 Summary: A ROS 2 package for EMG and IMU data acquisition from a Shimmer device.
+Home-page: UNKNOWN
 Maintainer: William
 Maintainer-email: wtolst19@student.aau.dk
 License: TODO: License declaration
-Requires-Dist: setuptools
+Platform: UNKNOWN
+
+UNKNOWN
+
