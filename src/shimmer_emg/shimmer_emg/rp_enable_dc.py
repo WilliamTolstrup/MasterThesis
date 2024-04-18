@@ -44,7 +44,7 @@ def motor_control(action, speed=10):
         pwm_backward.ChangeDutyCycle(0)
 
 # Load SVM model
-svm_model = joblib.load('svm_model.pk1')
+svm_model = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/svm_model.pk1')
 
 
 # def read_encoder():
@@ -71,6 +71,8 @@ class MotorControlNode(Node):
         features = msg.data
         new_state = svm_model.predict([features])[0]
         if new_state != self.current_state:
+            print("State: ")
+            print(self.current_state)
             self.current_state = new_state
             self.control_motor(self.current_state)
 
