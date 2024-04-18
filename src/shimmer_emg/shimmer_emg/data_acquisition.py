@@ -174,10 +174,10 @@ class ShimmerDataNode(Node):
                         emg_filtered_features = [self.mav(self.emg_filtered_buffer_ch1), self.mav(self.emg_filtered_buffer_ch2), self.rms(self.emg_filtered_buffer_ch1), self.rms(self.emg_filtered_buffer_ch2), self.sd(self.emg_filtered_buffer_ch1), self.sd(self.emg_filtered_buffer_ch2), self.wl(self.emg_filtered_buffer_ch1), self.wl(self.emg_filtered_buffer_ch2)]
                         imu_features          = [self.mav(self.acc_buffer_x), self.mav(self.acc_buffer_y), self.mav(self.acc_buffer_z)]
 
-                        print("Features: ")
-                        print(emg_raw_features)
-                        print(emg_filtered_features)
-                        print(imu_features)
+                        # print("Features: ")
+                        # print(emg_raw_features)
+                        # print(emg_filtered_features)
+                        # print(imu_features)
 
                         # Slide the window
                         # self.window_overlap_samples is half the window_size_samples, so we keep half of the window.
