@@ -67,22 +67,43 @@ class MotorControlNode(Node):
         self.subscription = self.create_subscription(Float32MultiArray, '/shimmer/features', self.listener_callback, 10)
         self.current_state = None
 
-    def listener_callback(self, msg):
-        features = msg.data
+    def listener_callback(self, feature_msg):
+        features = feature_msg.data
         new_state = svm_model.predict([features])[0]
+
+        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2
+        #self.signal = (features[9] + features[10]) / 2 # Filtered MAV EMG ch1 and ch2
+
+        # Thresholds are stand-ins right now, as I haven't tested regular signal strengths.
+
+        if self.signal <= 10:
+            self.signal_strength = 100
+        elif self.signal <= 30:
+            self.signal_strength = 75
+        elif self.signal <= 50:
+            self.signal_strength = 50
+        elif self.signal <= 70:
+            self.signal_strength = 25
+        elif self.signal > 70:
+            self.signal_strength = 10
+
         if new_state != self.current_state:
             print("State: ")
             print(self.current_state)
             self.current_state = new_state
-            self.control_motor(self.current_state)
+            self.control_motor(self.current_state, self.signal_strength)
 
-    def control_motor(self, state):
+    def control_motor(self, state, signal_strength):
+        # Adjust speed based on signal strength
+        speed = max(0, min(100, signal_strength))
+
         if state == 'flexion':
-            motor_control("forward")
+            motor_control("forward", speed)
         elif state == 'extension':
-            motor_control("backward")
+            motor_control("backward", speed)
         else:
             motor_control("stop")
+
 
 def main(args=None):
     rclpy.init(args=args)
