@@ -43,10 +43,11 @@ def motor_control(action, speed=10):
         pwm_forward.ChangeDutyCycle(0)
         pwm_backward.ChangeDutyCycle(0)
 
-# Load SVM model
+# Load SVM model and scaler
 svm_model = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/svm_model.pk1')
+scaler = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/scaler.pk1')
 
-
+# TODO: Get this working again
 # def read_encoder():
 #     global clkLastState
 #     global counter
@@ -69,9 +70,10 @@ class MotorControlNode(Node):
 
     def listener_callback(self, feature_msg):
         features = feature_msg.data
-        new_state = svm_model.predict([features])[0]
+        scaled_features = scaler.transform([features])
+        new_state = svm_model.predict([scaled_features])[0]
 
-        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2
+        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2   #TODO: Testing if this is fine, of if I should subscribe to raw/filtered emg, too, and use that
         #self.signal = (features[9] + features[10]) / 2 # Filtered MAV EMG ch1 and ch2
 
         # Thresholds are stand-ins right now, as I haven't tested regular signal strengths.
@@ -85,11 +87,12 @@ class MotorControlNode(Node):
         elif self.signal <= 70:
             self.signal_strength = 25
         elif self.signal > 70:
-            self.signal_strength = 10
+            self.signal_strength = 10 # TODO: Not sure if should be 0, need to test!!! 
+
+        print("Predicted state: ")
+        print(self.current_state)
 
         if new_state != self.current_state:
-            print("State: ")
-            print(self.current_state)
             self.current_state = new_state
             self.control_motor(self.current_state, self.signal_strength)
 
@@ -97,9 +100,9 @@ class MotorControlNode(Node):
         # Adjust speed based on signal strength
         speed = max(0, min(100, signal_strength))
 
-        if state == 'flexion':
+        if state == 'flexion_heavy_vertical' or state == 'flexion_light_vertical' or state == 'flexion_heavy_horizontal' or state == 'flexion_light_horizontal':
             motor_control("forward", speed)
-        elif state == 'extension':
+        elif state == 'extension_heavy_vertical' or state == 'extension_light_vertical' or state == 'extension_heavy_horizontal' or state == 'extension_light_horizontal':
             motor_control("backward", speed)
         else:
             motor_control("stop")
