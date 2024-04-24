@@ -4,6 +4,7 @@ import joblib
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
+import numpy as np
 
 # Motor Driver GPIO Pins
 IN1 = 17  # Example GPIO pin
@@ -70,24 +71,30 @@ class MotorControlNode(Node):
 
     def listener_callback(self, feature_msg):
         features = feature_msg.data
-        scaled_features = scaler.transform([features])
-        new_state = svm_model.predict([scaled_features])[0]
+        features = np.array(features).reshape(1,-1)
+        scaled_features = scaler.transform(features)
+        new_state = svm_model.predict(scaled_features)[0]
 
-        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2   #TODO: Testing if this is fine, of if I should subscribe to raw/filtered emg, too, and use that
+        print("OG features")
+        print(features)
+        print("Scaled features")
+        print(scaled_features)
+        self.signal_strength = 10 # Debug
+#        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2   #TODO: Testing if this is fine, of if I should subscribe to raw/filtered emg, too, and use that
         #self.signal = (features[9] + features[10]) / 2 # Filtered MAV EMG ch1 and ch2
 
         # Thresholds are stand-ins right now, as I haven't tested regular signal strengths.
 
-        if self.signal <= 10:
-            self.signal_strength = 100
-        elif self.signal <= 30:
-            self.signal_strength = 75
-        elif self.signal <= 50:
-            self.signal_strength = 50
-        elif self.signal <= 70:
-            self.signal_strength = 25
-        elif self.signal > 70:
-            self.signal_strength = 10 # TODO: Not sure if should be 0, need to test!!! 
+ #       if self.signal <= 10:
+ #           self.signal_strength = 100
+ #       elif self.signal <= 30:
+ #           self.signal_strength = 75
+ #       elif self.signal <= 50:
+ #           self.signal_strength = 50
+ #       elif self.signal <= 70:
+ #           self.signal_strength = 25
+ #       elif self.signal > 70:
+ #           self.signal_strength = 10 # TODO: Not sure if should be 0, need to test!!! 
 
         print("Predicted state: ")
         print(self.current_state)
