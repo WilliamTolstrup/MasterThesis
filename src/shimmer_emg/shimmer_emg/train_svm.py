@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.svm import SVC
@@ -43,24 +43,31 @@ X_test_scaled = scaler.transform(X_test)
 
 joblib.dump(scaler, 'scaler.pk1') # Save scaler
 
-# Train LDA model
-lda = LDA()
-lda.fit(X_train_scaled, y_train)
+# Define the parameter grid for SVM
+param_grid = {'C': [0.1, 1, 10, 100],
+              'gamma': [1, 0.1, 0.01, 0.001],
+              'kernel': ['linear', 'rbf', 'poly', 'sigmoid']}
 
-# Train SVM model
-svm = SVC(kernel='linear')
-svm.fit(X_train_scaled, y_train)
+# Perform cross-validation and hyperparameter tuning
+svm_grid = GridSearchCV(SVC(), param_grid, cv=10, scoring='accuracy', verbose=1, n_jobs=-1)
+svm_grid.fit(X_train_scaled, y_train)
+
+# Get the best parameters and refit the model
+best_params = svm_grid.best_params_
+best_svm = svm_grid.best_estimator_
+best_svm.fit(X_train_scaled, y_train)
+
+# Print the best parameters including the selected kernel
+print("Best SVM Parameters:")
+print(best_params)
 
 # Save the SVM model when satisfied. 
-joblib.dump(svm, 'svm_model.pk1')
+joblib.dump(best_svm, 'svm_model.pk1')
 
 # Predictions and Evaluations
-y_pred_lda = lda.predict(X_test_scaled)
-y_pred_svm = svm.predict(X_test_scaled)
-print("LDA Accuracy:", accuracy_score(y_test, y_pred_lda))
-print("SVM Accuracy:", accuracy_score(y_test, y_pred_svm))
-print("\nLDA Classification Report:\n", classification_report(y_test, y_pred_lda))
-print("\nSVM Classification Report:\n", classification_report(y_test, y_pred_svm))
+y_pred_best_svm = best_svm.predict(X_test_scaled)
+print("Best SVM Accuracy:", accuracy_score(y_test, y_pred_best_svm))
+print("\nBest SVM Classification Report:\n", classification_report(y_test, y_pred_best_svm))
 
 # Plot confusion matrices
 def plot_confusion_matrix(cm, classes, title):
@@ -74,9 +81,7 @@ def plot_confusion_matrix(cm, classes, title):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
-plt.figure(figsize=(12, 6))
-plt.subplot(1, 2, 1)
-plot_confusion_matrix(confusion_matrix(y_test, y_pred_lda), lda.classes_, 'LDA Confusion Matrix')
-plt.subplot(1, 2, 2)
-plot_confusion_matrix(confusion_matrix(y_test, y_pred_svm), svm.classes_, 'SVM Confusion Matrix')
+# Plot confusion matrix for the best SVM model
+plt.figure(figsize=(6, 6))
+plot_confusion_matrix(confusion_matrix(y_test, y_pred_best_svm), best_svm.classes_, 'Best SVM Confusion Matrix')
 plt.show()

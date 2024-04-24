@@ -4,4 +4,3 @@ imu_emg_aq = shimmer_emg.imu_emg_aq:main
 plot_data = shimmer_emg.plot_data:main
 record_data = shimmer_emg.record_data:main
 rp_enable_dc = shimmer_emg.rp_enable_dc:main
-
