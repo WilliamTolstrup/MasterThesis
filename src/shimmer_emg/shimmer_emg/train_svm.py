@@ -8,14 +8,29 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 import matplotlib.pyplot as plt
 import joblib
 
+### TODO:
+# Test with and without raw emg features/ coefficients.
+# Also, figure out what to do with the imu data; should it be part of the classifier or solely for angle estimation?
+
+
 # Load the dataset
 df = pd.read_csv('data_file.csv')
 
 
 # Select features and target variable
-X = df[['emg_raw_mav_ch1', 'emg_raw_mav_ch2', 'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 'emg_raw_wl_ch1', 'emg_raw_wl_ch2',
-        'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 'emg_filtered_wl_ch1', 'emg_filtered_wl_ch1',
-        'acc_mav_x', 'acc_mav_y', 'acc_mav_z']]
+X = df[['emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
+        'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 
+        'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
+        'emg_raw_wl_ch1', 'emg_raw_wl_ch2', 
+        'raw_coeff_1', 'raw_coeff_2', 'raw_coeff_3', 'raw_coeff_4', 'raw_coeff_5', 'raw_coeff_6', 'raw_coeff_7', 'raw_coeff_8', 
+        'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 
+        'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 
+        'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 
+        'emg_filtered_wl_ch1', 'emg_filtered_wl_ch2', 
+        'filtered_coeff_1', 'filtered_coeff_2', 'filtered_coeff_3', 'filtered_coeff_4', 'filtered_coeff_5', 'filtered_coeff_6', 'filtered_coeff_7', 'filtered_coeff_8', 
+        'acc_mav_x', 'acc_mav_y', 'acc_mav_z', 
+        'acc_rms_x', 'acc_rms_y', 'acc_rms_z',
+        'acc_sd_x', 'acc_sd_y', 'acc_sd_z',]]
 y = df['state']
 
 # Split the dataset into training and test sets
@@ -26,16 +41,18 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Train an LDA model
+joblib.dump(scaler, 'scaler.pk1') # Save scaler
+
+# Train LDA model
 lda = LDA()
 lda.fit(X_train_scaled, y_train)
 
-# Train an SVM model
-svm = SVC(kernel='sigmoid')
+# Train SVM model
+svm = SVC(kernel='linear')
 svm.fit(X_train_scaled, y_train)
 
-# Save the SVM model
-#joblib.dump(svm, 'svm_model.pk1')
+# Save the SVM model when satisfied. 
+joblib.dump(svm, 'svm_model.pk1')
 
 # Predictions and Evaluations
 y_pred_lda = lda.predict(X_test_scaled)
