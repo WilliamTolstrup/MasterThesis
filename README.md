@@ -119,5 +119,15 @@ When SSH'ing into the raspberry pi, you will need 3 terminal:
 This should enable the motor to turn either forward or backward depending on the predicted state. If "rest" or no state is predicted, the motor should remain stationary
 
 # Data file
-0    1st session
-247  2nd session
+The .csv file is based on a 4 stage protocol.
+Each session can be divided into 4 blocks, which each classify 3 distinct variations of "rest", "flexion", and "extension" states.
+
+Example of a session:
+
+Session 1: Morning session, 2024/04/24
+    - Block 1: Vertical movement, heavy weight, 20 repetitions
+    - Block 2: Vertical movement, light weight, 20 repetitions
+    - Block 3: Horizontal movement, heavy weight, 20 repetitions
+    - Block 4: Horizontal movement, light weight, 20 repetitions
+
+This results in 12 distinct variations of the aforementioned "rest", "flextion", and "extension" states, which are used in the SVM model.
