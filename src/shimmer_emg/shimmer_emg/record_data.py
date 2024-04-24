@@ -19,7 +19,32 @@ class DataListener(Node):
         self.writer = csv.writer(self.file)
         # Header for .csv file
         if not self.file_exists:
-            self.writer.writerow(['timestamp', 'emg_raw_ch1', 'emg_raw_ch2', 'emg_filtered_ch1', 'emg_filtered_ch2', 'ln_acc_x', 'ln_acc_y', 'ln_acc_z', 'emg_raw_mav_ch1', 'emg_raw_mav_ch2', 'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 'emg_raw_wl_ch1', 'emg_raw_wl_ch2', 'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 'emg_filtered_wl_ch1', 'emg_filtered_wl_ch1', 'acc_mav_x', 'acc_mav_y', 'acc_mav_z', 'state'])
+            self.writer.writerow(['timestamp', 
+                                  'emg_raw_ch1', 'emg_raw_ch2', 
+                                  'emg_filtered_ch1', 'emg_filtered_ch2', 
+                                  'ln_acc_x', 'ln_acc_y', 'ln_acc_z', 
+
+                                  'emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
+                                  'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 
+                                  'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
+                                  'emg_raw_wl_ch1', 'emg_raw_wl_ch2', 
+                                  'raw_coeff_1', 'raw_coeff_2', 'raw_coeff_3', 'raw_coeff_4', 'raw_coeff_5', 'raw_coeff_6', 'raw_coeff_7', 'raw_coeff_8', 
+
+                                  'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 
+                                  'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 
+                                  'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 
+                                  'emg_filtered_wl_ch1', 'emg_filtered_wl_ch2', 
+                                  'filtered_coeff_1', 'filtered_coeff_2', 'filtered_coeff_3', 'filtered_coeff_4', 'filtered_coeff_5', 'filtered_coeff_6', 'filtered_coeff_7', 'filtered_coeff_8', 
+
+                                  'acc_mav_x', 'acc_mav_y', 'acc_mav_z', 
+                                  'acc_rms_x', 'acc_rms_y', 'acc_rms_z',
+                                  'acc_sd_x', 'acc_sd_y', 'acc_sd_z',
+                                #   'acc_variance_x', 'acc_variance_y', 'acc_variance_z',
+                                #   'acc_ptp_x', 'acc_ptp_y', 'acc_ptp_z',
+                                #   'acc_sma',
+                                  'state'])
+
+        self.iteration = 1
 
         # Don't record data for the first 5 seconds to avoid noise
         self.initial_delay_duration = 5  # seconds
@@ -38,6 +63,8 @@ class DataListener(Node):
         self.new_emg_filtered_data = False
         self.new_ln_acc_data = False
         self.new_features_data = False
+        self.timestamp_flag_one = False
+        self.timestamp_initial = [0, 0]
 
 
 
@@ -57,12 +84,9 @@ class DataListener(Node):
         self.current_state = 'rest'
         self.state_start_time = self.start_time
         self.protocol = [
-            ('rest', 4),
-            ('flexion', 4), # Maybe add 2 second "other" after flex
-            #('static hold', 2),
-            ('extension', 4),
-            #('static hold', 2),
-            #('other', 5)   # If above, make 2 sec here too
+            ('rest_light_horizontal', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
+            ('flexion_light_horizontal', 4),
+            ('extension_light_horizontal', 4),
         ]
         self.protocol_index = 0
         self.state_transitions = []
@@ -75,8 +99,25 @@ class DataListener(Node):
     def timestamp_callback(self, msg):
         #self.get_logger().info(f'Timestamp: {msg}')
         self.timestamp_data = msg.y - msg.x #(current_time - start_time)
+        # if self.timestamp_flag_one == False:
+        #     self.timestamp_initial = [msg.sec, msg.nanosec]
+        #     self.timestamp_flag_one = True
+        # # Current timestamp in the message
+        # current_timestamp = [msg.sec, msg.nanosec]
 
-        #self.timestamp_data = [msg.sec, msg.nanosec]
+        # # Compute the elapsed time since the initial timestamp
+        # elapsed_sec = current_timestamp[0] - self.timestamp_initial[0]
+        # elapsed_nsec = current_timestamp[1] - self.timestamp_initial[1]
+
+        # # Normalize the difference
+        # if elapsed_nsec < 0:
+        #     # If nanoseconds are negative, borrow 1 second
+        #     elapsed_nsec += 1e9
+        #     elapsed_sec -= 1
+
+        # # Store the elapsed time in seconds and nanoseconds
+        # self.timestamp_data = [elapsed_sec, elapsed_nsec]
+
         self.new_timestamp_data = True
         self.update_protocol_state()
         self.log_and_save_data()
@@ -114,6 +155,12 @@ class DataListener(Node):
             self.current_state, _ = self.protocol[self.protocol_index]  # Update to new state
             self.state_start_time = current_time  # Reset state start time
             print(f"Switching to {self.current_state}.")
+            if self.current_state == 'rest_heavy_vertical' or self.current_state == 'rest_light_vertical' or self.current_state == 'rest_heavy_horizontal' or self.current_state == 'rest_light_horizontal':
+                print(self.iteration)
+                self.iteration += 1
+
+                if self.iteration == 21:
+                    print("=========== STOP ===========")
 
 
     def log_and_save_data(self):
