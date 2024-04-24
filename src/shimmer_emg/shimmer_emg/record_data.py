@@ -84,9 +84,9 @@ class DataListener(Node):
         self.current_state = 'rest'
         self.state_start_time = self.start_time
         self.protocol = [
-            ('rest_light_horizontal', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
-            ('flexion_light_horizontal', 4),
-            ('extension_light_horizontal', 4),
+            ('rest_heavy_horizontal', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
+            ('flexion_heavy_horizontal', 4),
+            ('extension_heavy_horizontal', 4),
         ]
         self.protocol_index = 0
         self.state_transitions = []
