@@ -716,7 +716,7 @@ class Shimmer3:
                         elif current_channel_data_type == "i16":
                             raw_data = struct.unpack("<H", interested_data)[0]
                         elif current_channel_data_type == "i16*":
-                            raw_data = struct.unpack(">h", interested_data)[0]   # Changed from >H to >i
+                            raw_data = struct.unpack(">H", interested_data)[0]   # Changed from >H to >i
                         elif current_channel_data_type == "u16":
                             raw_data = struct.unpack("H", interested_data)[0]
                         elif current_channel_data_type == "u24":
@@ -730,7 +730,7 @@ class Shimmer3:
                             (raw_data0, raw_data1, raw_data2) = struct.unpack("BBB", interested_data)
                             raw_data = raw_data2 + raw_data1 * 256 + raw_data0 * 65536
                         elif current_channel_data_type == "i24*":
-                            raw_data = struct.unpack('>i', (data[5:8] + '\0'.encode()))[0] >> 8
+                            raw_data = struct.unpack('>i', (interested_data + '\0'.encode()))[0] >> 8
 
                         if not calibrated:
                             packet.append(raw_data)
@@ -809,6 +809,130 @@ class Shimmer3:
             return None
 
     # INIT & UPDATE (object) properties and methods
+
+
+    ### Custom
+
+    def read_emg_acc_packet(self, calibrated=True):
+        """
+        Read all packets in the receipt buffer of the connection.
+
+        The packets are a arrays of that type:\n
+        *[timestamp, timeRTCstart, timeRTCcurrent, sensor1 data, sensor2 data, sensor3 data, ...]* \n
+        And packets are returned like: \n
+        *[oldest_packet, packet1, packet2, ..., newest_packet]*
+
+        :param calibrated: if data should be calibrated or not
+        :type calibrated: bool
+        :return: all the packets in the receipt buffer
+        :rtype: list
+        """
+        if self._current_state == util.BT_STREAMING or self._current_state == util.BT_STREAMING_SD_LOGGING:
+            # Compute the size that a packet should have
+            packet_size = util.calculate_data_packet_size(self._channels)
+            ddata = self._buffer_data
+
+            # Check of much data are in the receipt buffer
+            bytes_in_port = self._serial_port.inWaiting()
+
+            if bytes_in_port > 0:
+                # If there are data it will read all
+                ddata += self._serial_port.read(bytes_in_port)
+                # Now we have to check if we can infers packets from the data that we have
+                remaining_data = len(ddata)
+
+                packets = []
+                n_of_packets = 0
+                while remaining_data > packet_size:
+                    # That code is equal to 'read_data_packet_bt'. Consider to read the above method
+                    data = ddata[0:packet_size]
+                    ddata = ddata[packet_size:]
+                    remaining_data = len(ddata)
+
+
+                    n_of_packets += 1
+
+                    packet = []
+
+                    (timestamp0, timestamp1, timestamp2) = struct.unpack("BBB", data[1:4])
+                    timestamp = timestamp0 + timestamp1 * 256 + timestamp2 * 65536
+
+                    # Check for overflows
+                    if self._previous_timestamp != -1 and timestamp < self._previous_timestamp:
+                        self._clock_overflows += 1
+                    self._previous_timestamp = timestamp
+
+                    timestamp = timestamp + self._clock_overflows * 16777216
+
+                    if self._first_local_timestamp_of_a_stream == -1:
+                        self._first_local_timestamp_of_a_stream = timestamp
+                    if self._first_unix_timestamp_of_a_stream == -1:
+                        self._first_unix_timestamp_of_a_stream = time.time()  # in seconds
+
+                    packet.append(timestamp)
+                    packet.append(self._first_unix_timestamp_of_a_stream)
+                    calibrated_timestamp = self._first_unix_timestamp_of_a_stream + \
+                                           self.calibrate_timestamp_time_elapsed(timestamp)[0]
+                    packet.append(calibrated_timestamp)
+
+                    self._previous_calibrated_timestamp = calibrated_timestamp
+
+                    start_index = 4
+                    tmp_array = []
+                    tmp_acc_array = []
+                    tmp_mag_array = []
+                    for i in range(self._num_channels):
+                        current_channel = self._channels[i]
+                        current_channel_data_type = util.CHANNEL_DATA_TYPE[current_channel]
+                        byte_size_data_type = util.calculate_data_type_size(current_channel_data_type)
+                        interested_data = data[start_index: start_index + byte_size_data_type]
+                        start_index = start_index + byte_size_data_type
+                        raw_data = -1
+
+                        if current_channel_data_type == "u12":
+                            raw_data = struct.unpack("<H", interested_data)[0]
+                        elif current_channel_data_type == "i16*":
+                            raw_data = struct.unpack(">H", interested_data)[0]   # Changed from >H to >i
+                        elif current_channel_data_type == "i24*":
+                            raw_data = struct.unpack('>i', (data[5:8] + '\0'.encode()))[0] >> 8
+
+
+                        if not calibrated:
+                            packet.append(raw_data)
+                        else:
+                            if current_channel in [util.CHANNEL_LOW_ACC_X, util.CHANNEL_LOW_ACC_Y, util.CHANNEL_LOW_ACC_Z]:
+                                tmp_acc_array.append(raw_data)
+
+                                if len(tmp_acc_array) == 3:
+                                    calibrated_data = self.calibrate_low_acc_vector(tmp_acc_array)
+                                    packet += calibrated_data
+                                    tmp_acc_array = []
+
+                                else:
+                                    # print("read_data -> not supported yet")
+                                    packet = packet + tmp_array
+
+                                tmp_array = []
+
+                            elif current_channel == util.CHANNEL_ExG_1_CH1_24BIT or current_channel == util.CHANNEL_ExG_1_CH2_24BIT:
+                                calibrated_data = self.calibrate_exg_24bit(raw_data)
+                                packet.append(calibrated_data)
+                            else:
+                                packet.append(raw_data)
+                    packets.append(packet)
+                # The remaining data we should use at the next read
+                self._buffer_data = ddata
+
+                return n_of_packets, packets
+            else:
+                return 0, []
+        else:
+            if self.debug:
+                print("read_emg_acc_packet -> ERROR: the Shimmer is not streaming data.")
+            return None
+
+
+
 
     @property
     def sr_number(self):

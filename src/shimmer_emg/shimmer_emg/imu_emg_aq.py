@@ -17,7 +17,6 @@ from geometry_msgs.msg import Vector3
 from collections import deque
 import subprocess
 import json
-from filterpy.kalman import UnscentedKalmanFilter as UKF
 from filterpy.kalman import MerweScaledSigmaPoints
 
 class Main(QtWidgets.QMainWindow):
@@ -36,8 +35,6 @@ class Main(QtWidgets.QMainWindow):
             'gyro_y': None,
             'gyro_z': None
         }
-
-        ukf = UnscentedKalmanFilter(dt=0, process_noise_std=0.1, measurement_noise_std=0.1)
 
         # Define serial object
         self.serialObj = serial.Serial()
@@ -505,8 +502,13 @@ class Communicate(QtCore.QObject):
                 ddata = ddata[framesize:]
                 numbytes = len(ddata)
 
+                print("DATA: ")
+                print(data)
+
                 packettype = struct.unpack('B', data[0:1])
                 (ts0, ts1,) = struct.unpack('BB', data[1:3])
+                print("packet, ts0, ts1:")
+                print(packettype, ts0, ts1)
                 (accx, accy, accz) = struct.unpack('HHH', data[3:9])
                 (gyrox, gyroy, gyroz) = struct.unpack('HHH', data[9:15])
                 (magx, magy, magz) = struct.unpack('>hhh', data[15:21])
@@ -611,8 +613,8 @@ class Communicate(QtCore.QObject):
 
         # Send the set sensors command (IMU and EMG)
         print("")
-        print("Sending sensor commands for IMU and EMG communication...")
-        self.serial.write(struct.pack('BBBB', 0x08, 0xF0, 0x00, 0x00)) # 0x08 is command byte, 0x10 enables EMG, 0x00 is trailing.  0xF0 Enables low noise accel, gyro, mag, exg
+        print("Sending sensor commands for IMU and EMG communication...") # 0x90 enables emg (24bit, chip 1) and accelerometer (low noise)
+        self.serial.write(struct.pack('BBBB', 0x08, 0x90, 0x00, 0x00)) # 0x08 is command byte, 0x10 enables EMG, 0x00 is trailing.  0xF0 Enables low noise accel, gyro, mag, exg
         #self.serial.write(struct.pack('BBBB', 0x08, 0xE0, 0x00, 0x00)) # 0x08 is command byte, 0xE0 enables IMU, 0x00 is trailing.
         self.wait_for_ack()
         time.sleep(2)
@@ -674,57 +676,6 @@ class RealTimeMovingAverage:
         self.sum += new_value # Add newest data to the sum
 
         return self.sum / len(self.data) # Return average of the window
-
-
-class UnscentedKalmanFilter:
-    def __init__(self, dt, process_noise_std, measurement_noise_std):
-        # dt: Time step between measurements
-        # process_noise_std: Standard deviation of the process noise
-        # measurement_noise_std: Standard deviation of the measurement noise
-        
-        # Define the sigma points
-        sigma_points = MerweScaledSigmaPoints(n=1, alpha=0.1, beta=2.0, kappa=0)
-
-        # Initialize UKF
-        self.ukf = UKF(dim_x=1, dim_z=1, fx=self.fx, hx=self.hx, dt=dt, points=sigma_points)
-
-        # Process noise
-        self.ukf.Q = np.diag([process_noise_std**2])
-
-        # Measurement noise
-        self.ukf.R = np.diag([measurement_noise_std**2])
-
-        # Initial state
-        self.ukf.x = np.array([0.]) # Assumption that the arm starts outstretched at 0 degrees
-
-        # Initial covariance
-        self.ukf.P *= 0.2
-
-    def fx(self, x, dt):
-        # State transition function
-        # Here, x[0] would be the current angle estimate
-        # Since we're using gyroscope data to predict the next state, the actual update happens in the update step
-        return x
-    
-    def hx(self, x):
-        # Measurement function
-        # Maps state space (angle) into measurement space, which in this simplified case is the same
-        return x
-    
-    def update(self, gyro_y, dt):
-        # gyro_y: Angular velocity around the Y-axis from the gyroscope (in degrees per second)
-        # dt: Time step since the last update
-        
-        # Update the state with the gyroscope measurement
-        self.ukf.predict(dt=dt)  # Predict the next state based on the current state
-        self.ukf.update(gyro_y)  # Update the state with the actual measurement
-        
-        return self.ukf.x[0]  # Return the current angle estimate
-    
-    def get_state(self):
-        # Returns the current state estimate
-        return self.ukf.x[0]
-
 
 class Application(QtWidgets.QApplication):
     def __init__(self, sys_argv, node):

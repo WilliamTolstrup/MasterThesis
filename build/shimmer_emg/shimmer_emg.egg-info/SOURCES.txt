@@ -13,6 +13,7 @@ shimmer_emg/__init__.py
 shimmer_emg/config.py
 shimmer_emg/data_acquisition.py
 shimmer_emg/imu_emg_aq.py
+shimmer_emg/pca_test.py
 shimmer_emg/plot_data.py
 shimmer_emg/record_data.py
 shimmer_emg/rp_enable_dc.py

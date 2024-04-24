@@ -4,6 +4,10 @@ The repository relies on ROS2 Humble.
 
 It will contain scripts for acquiring EMG and IMU data, recording it to .csv files, plotting the data, and training a ML algorithm, and running it all on a Raspberry Pi 4
 
+This project uses the Shimmer-Python API that can be found here:
+https://github.com/matmont/shimmer3
+Although with key changes, which is why it is also included in this project.
+
 ## ROADMAP
 
 - [x] Acquire EMG and IMU data simultaneously
@@ -12,7 +16,7 @@ It will contain scripts for acquiring EMG and IMU data, recording it to .csv fil
 - [x] Train a machine learning algorithm  (SVM) on the data
 - [ ] Integrate encoder or potentiometer to estimate angle of the arm
 - [ ] Integrate DC motor to actuate arm based on the model
-- [ ] Make it work on a microcontroller
+- [x] Make it work on a microcontroller
 - [ ] Implmenet everything together to work with the exoskeleton
 
 
@@ -113,3 +117,7 @@ When SSH'ing into the raspberry pi, you will need 3 terminal:
 3. Run the 'rp_enable_dc' script
 
 This should enable the motor to turn either forward or backward depending on the predicted state. If "rest" or no state is predicted, the motor should remain stationary
+
+# Data file
+0    1st session
+247  2nd session
