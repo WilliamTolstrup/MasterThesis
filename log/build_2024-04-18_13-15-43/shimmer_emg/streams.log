@@ -1,0 +1,29 @@
+[2.469s] Invoking command in '/home/pi/MasterThesis/src/shimmer_emg': PYTHONPATH=/home/pi/MasterThesis/build/shimmer_emg/prefix_override:/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/pi/MasterThesis/build/shimmer_emg/build install --record /home/pi/MasterThesis/build/shimmer_emg/install.log --single-version-externally-managed install_data
+[3.387s] running egg_info
+[3.389s] writing ../../build/shimmer_emg/shimmer_emg.egg-info/PKG-INFO
+[3.390s] writing dependency_links to ../../build/shimmer_emg/shimmer_emg.egg-info/dependency_links.txt
+[3.391s] writing entry points to ../../build/shimmer_emg/shimmer_emg.egg-info/entry_points.txt
+[3.392s] writing requirements to ../../build/shimmer_emg/shimmer_emg.egg-info/requires.txt
+[3.392s] writing top-level names to ../../build/shimmer_emg/shimmer_emg.egg-info/top_level.txt
+[3.400s] reading manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+[3.405s] writing manifest file '../../build/shimmer_emg/shimmer_emg.egg-info/SOURCES.txt'
+[3.405s] running build
+[3.406s] running build_py
+[3.408s] copying shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg
+[3.410s] running install
+[3.411s] running install_lib
+[3.416s] copying /home/pi/MasterThesis/build/shimmer_emg/build/lib/shimmer_emg/rp_enable_dc.py -> /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg
+[3.420s] byte-compiling /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/rp_enable_dc.py to rp_enable_dc.cpython-310.pyc
+[3.421s] Sorry: TabError: inconsistent use of tabs and spaces in indentation (rp_enable_dc.py, line 74)
+[3.422s] running install_data
+[3.422s] running install_egg_info
+[3.428s] removing '/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info' (and everything under it)
+[3.430s] Copying ../../build/shimmer_emg/shimmer_emg.egg-info to /home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg-0.0.0-py3.10.egg-info
+[3.435s] running install_scripts
+[3.511s] Installing data_acquisition script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+[3.512s] Installing imu_emg_aq script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+[3.514s] Installing plot_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+[3.514s] Installing record_data script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+[3.514s] Installing rp_enable_dc script to /home/pi/MasterThesis/install/shimmer_emg/lib/shimmer_emg
+[3.516s] writing list of installed files to '/home/pi/MasterThesis/build/shimmer_emg/install.log'
+[3.624s] Invoked command in '/home/pi/MasterThesis/src/shimmer_emg' returned '0': PYTHONPATH=/home/pi/MasterThesis/build/shimmer_emg/prefix_override:/home/pi/MasterThesis/install/shimmer_emg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/shimmer_emg build --build-base /home/pi/MasterThesis/build/shimmer_emg/build install --record /home/pi/MasterThesis/build/shimmer_emg/install.log --single-version-externally-managed install_data

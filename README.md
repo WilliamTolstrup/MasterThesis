@@ -38,7 +38,7 @@ bluez-tools
 You can install these like so: 'sudo apt-get install bluez dbus bluez-tools'
 
 You may also need to be the /dev/rfcomm0 serial port to the specific MAC address of your device, like so:
-'sudo rfcomm bind 0 <MAC address> 1'
+'sudo rfcomm bind 0 <MAC address> 1', for me it is 00:06:66:FB:4C:BE
 
 From here, SSH into the Raspberry Pi and run the following commands:
 'bluetoothctl'
