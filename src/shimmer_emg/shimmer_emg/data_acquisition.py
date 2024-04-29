@@ -260,7 +260,7 @@ class ShimmerDataNode(Node):
                         
                         # Total 48 features (18, 18, 18)
                         # Currently a problem with the Float32MultiArray and how I publish the features, not important for checking the EMG channels. I'm working on it.
-                        featureMsg.data = emg_raw_features + emg_filtered_features + imu_features
+                        featureMsg.data = emg_filtered_features + imu_features#emg_raw_features + emg_filtered_features + imu_features
                         self.pubFeatures.publish(featureMsg)
 
                         if ts_current - ts_start < 5:
