@@ -14,20 +14,20 @@ import joblib
 
 
 # Load the dataset
-df = pd.read_csv('data_file.csv')
+df = pd.read_csv('features_file.csv')
 
 
 # Select features and target variable
 X = df[['emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
         'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 
         'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
-        'emg_raw_wl_ch1', 'emg_raw_wl_ch2', 
+        #'emg_raw_wl_ch1', 'emg_raw_wl_ch2', 
         'raw_coeff_1', 'raw_coeff_2', 'raw_coeff_3', 'raw_coeff_4', 'raw_coeff_5', 'raw_coeff_6', 'raw_coeff_7', 'raw_coeff_8', 
         'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 
         'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 
         'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2', 
-        'emg_filtered_wl_ch1', 'emg_filtered_wl_ch2', 
-        'filtered_coeff_1', 'filtered_coeff_2', 'filtered_coeff_3', 'filtered_coeff_4', 'filtered_coeff_5', 'filtered_coeff_6', 'filtered_coeff_7', 'filtered_coeff_8', 
+        #'emg_filtered_wl_ch1', 'emg_filtered_wl_ch2', 
+        'filtered_coeff_1', 'filtered_coeff_2', 'filtered_coeff_3', 'filtered_coeff_4', 'filtered_coeff_5', 'filtered_coeff_6', 'filtered_coeff_7', 'filtered_coeff_8',
         'acc_mav_x', 'acc_mav_y', 'acc_mav_z', 
         'acc_rms_x', 'acc_rms_y', 'acc_rms_z',
         'acc_sd_x', 'acc_sd_y', 'acc_sd_z',]]
@@ -44,12 +44,12 @@ X_test_scaled = scaler.transform(X_test)
 joblib.dump(scaler, 'scaler.pk1') # Save scaler
 
 # Define the parameter grid for SVM
-param_grid = {'C': [0.1, 1, 10, 100],
+param_grid = {'C': [0.1, 1, 2, 5, 10, 20],
               'gamma': [1, 0.1, 0.01, 0.001],
               'kernel': ['linear', 'rbf', 'poly', 'sigmoid']}
 
 # Perform cross-validation and hyperparameter tuning
-svm_grid = GridSearchCV(SVC(), param_grid, cv=10, scoring='accuracy', verbose=1, n_jobs=-1)
+svm_grid = GridSearchCV(SVC(), param_grid, cv=5, scoring='accuracy', verbose=1, n_jobs=-1)
 svm_grid.fit(X_train_scaled, y_train)
 
 # Get the best parameters and refit the model

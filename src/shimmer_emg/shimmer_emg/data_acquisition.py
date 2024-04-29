@@ -41,6 +41,7 @@ class ShimmerDataNode(Node):
         self.acc_buffer_y = []
         self.acc_buffer_z = []
         self.window_counter = 0
+        self.countdown = 5
 
         self.setup_filters() # EMG filters
         self.shimmer3 = self.setup_shimmer() # Connecting to shimmer, choosing sensors, etc, etc.
@@ -104,6 +105,10 @@ class ShimmerDataNode(Node):
     def wl(self, signal):                            # Wavelength
         return np.sum(np.abs(np.diff(signal)))
 
+    def derivative(self, signal):                    # Jerk
+        return np.diff(signal).astype(float)
+
+
     def wavelet_features(self, signal, wavelet_name='db4', max_decomposition_level=4, num_features=4):
         """
         Extract top N largest wavelet features based on magnitude.
@@ -132,6 +137,9 @@ class ShimmerDataNode(Node):
         largest_coeffs = flattened_coeffs[largest_indices]
 
         return largest_coeffs.tolist()
+
+
+
 
     def sendDataLoop(self):
         try:
@@ -228,8 +236,8 @@ class ShimmerDataNode(Node):
                         imu_features = [
                             self.mav(self.acc_buffer_x), self.mav(self.acc_buffer_y), self.mav(self.acc_buffer_z),  
                             self.rms(self.acc_buffer_x), self.rms(self.acc_buffer_y), self.rms(self.acc_buffer_z),  
-                            self.sd(self.acc_buffer_x), self.sd(self.acc_buffer_y), self.sd(self.acc_buffer_z)]
-
+                            self.sd(self.acc_buffer_x), self.sd(self.acc_buffer_y), self.sd(self.acc_buffer_z)]#,
+#                            self.derivative(self.acc_buffer_x), self.derivative(self.acc_buffer_y), self.derivative(self.acc_buffer_z)]
 
                         # Slide the window
                         # self.window_overlap_samples is half the window_size_samples, so we keep half of the window.
@@ -251,15 +259,17 @@ class ShimmerDataNode(Node):
                         # emg_filtered_mav_ch1, emg_filtered_mav_ch2, emg_filtered_rms_ch1, emg_filtered_rms_ch2, emg_filtered_sd_ch1, emg_filtered_sd_ch2, emg_filtered_wl_ch1, emg_filtered_wl_ch1, emg_filtered_wavelet_coefficients_ch1, emg_filtered_wavelet_coefficients_ch2,    acc_mav_x, acc_mav_y, acc_mav_z, acc_rms_x, acc_rms_y, acc_rms_z, acc_sd_x, acc_sd_y, acc_sd_z, acc_variance_x, acc_variance_y, acc_variance_z, acc_ptp_x, acc_ptp_y, acc_ptp_z, acc_sma
                         
                         # Total 48 features (18, 18, 18)
-                        print("RAW FEATURES: ")
-                        print(emg_raw_features)
-                        print("FILT FEATURES: ")
-                        print(emg_filtered_features)
-                        print("ACC FEATURES: ")
-                        print(imu_features)
                         # Currently a problem with the Float32MultiArray and how I publish the features, not important for checking the EMG channels. I'm working on it.
                         featureMsg.data = emg_raw_features + emg_filtered_features + imu_features
                         self.pubFeatures.publish(featureMsg)
+
+                        if ts_current - ts_start < 5:
+                            print(self.countdown)
+                            if self.countdown > 0:
+                                self.countdown -= 1
+
+                            if self.countdown == 0:
+                                print("   ---   Record!   ---   ")
 
                     
                     # Publish

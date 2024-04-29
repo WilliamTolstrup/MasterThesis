@@ -4,6 +4,9 @@
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/config.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/train_svm.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/pca_test.py
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/tcn_train.py
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/random_forest_train.py
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/rnn_train.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/util.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__init__.py
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/data_acquisition.py
@@ -15,6 +18,9 @@
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/config.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/train_svm.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/pca_test.cpython-310.pyc
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/tcn_train.cpython-310.pyc
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/random_forest_train.cpython-310.pyc
+/home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/rnn_train.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/util.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/__init__.cpython-310.pyc
 /home/william/repos/control_system_ws/install/shimmer_emg/lib/python3.10/site-packages/shimmer_emg/__pycache__/data_acquisition.cpython-310.pyc
