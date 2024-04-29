@@ -1,2 +1,0 @@
-Invoking command in '/home/pi/MasterThesis/build/custom_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/pi/MasterThesis/build/custom_interfaces -- -j4 -l4
-Invoked command in '/home/pi/MasterThesis/build/custom_interfaces' returned '2': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/pi/MasterThesis/build/custom_interfaces -- -j4 -l4

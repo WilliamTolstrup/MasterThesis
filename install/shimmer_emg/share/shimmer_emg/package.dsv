@@ -1,6 +1,0 @@
-source;share/shimmer_emg/hook/pythonpath.ps1
-source;share/shimmer_emg/hook/pythonpath.dsv
-source;share/shimmer_emg/hook/pythonpath.sh
-source;share/shimmer_emg/hook/ament_prefix_path.ps1
-source;share/shimmer_emg/hook/ament_prefix_path.dsv
-source;share/shimmer_emg/hook/ament_prefix_path.sh
