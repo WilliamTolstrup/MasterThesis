@@ -1,9 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Vector3
-from builtin_interfaces.msg import Time
 import csv
 import os
 import time
@@ -12,18 +10,21 @@ import time
 class DataListener(Node):
     def __init__(self):
         super().__init__('data_listener')
-        self.filename = 'data_file.csv'
-        self.file_exists = os.path.isfile(self.filename)
-        # Open the file in append mode and create a csv writer object
-        self.file = open(self.filename, mode='a', newline='')  # 'a' appends new data onto the existing file. 'w' wipes the file before writing.
-        self.writer = csv.writer(self.file)
-        # Header for .csv file
-        if not self.file_exists:
-            self.writer.writerow(['timestamp', 
-                                  'emg_raw_ch1', 'emg_raw_ch2', 
-                                  'emg_filtered_ch1', 'emg_filtered_ch2', 
-                                  'ln_acc_x', 'ln_acc_y', 'ln_acc_z', 
+        self.features_filename = 'features_file.csv'
+        self.features_file_exists = os.path.isfile(self.features_filename)
 
+        self.continuous_filename = 'continuous_file.csv'
+        self.continuous_file_exists = os.path.isfile(self.continuous_filename)
+
+        # Open the file in append mode and create a csv writer object
+        self.features_file = open(self.features_filename, mode='a', newline='')  # 'a' appends new data onto the existing file. 'w' wipes the file before writing.
+        self.continuous_file = open(self.continuous_filename, mode='a', newline='')
+        self.features_writer = csv.writer(self.features_file)
+        self.continuous_writer = csv.writer(self.continuous_file)
+
+        # Header for .csv file
+        if not self.features_file_exists:
+            self.features_writer.writerow([
                                   'emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
                                   'emg_raw_rms_ch1', 'emg_raw_rms_ch2', 
                                   'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
@@ -39,10 +40,15 @@ class DataListener(Node):
                                   'acc_mav_x', 'acc_mav_y', 'acc_mav_z', 
                                   'acc_rms_x', 'acc_rms_y', 'acc_rms_z',
                                   'acc_sd_x', 'acc_sd_y', 'acc_sd_z',
-                                #   'acc_variance_x', 'acc_variance_y', 'acc_variance_z',
-                                #   'acc_ptp_x', 'acc_ptp_y', 'acc_ptp_z',
-                                #   'acc_sma',
+     #                             'acc_diff_x', 'acc_diff_y', 'acc_diff_z',
                                   'state'])
+
+        if not self.continuous_file_exists:
+            self.continuous_writer.writerow(['timestamp',
+                                             'emg_raw_ch1', 'emg_raw_ch2',
+                                             'emg_filtered_ch1', 'emg_filtered_ch2',
+                                             'ln_acc_x', 'ln_acc_y', 'ln_acc_z',
+                                             'state'])
 
         self.iteration = 1
 
@@ -64,7 +70,6 @@ class DataListener(Node):
         self.new_ln_acc_data = False
         self.new_features_data = False
         self.timestamp_flag_one = False
-        self.timestamp_initial = [0, 0]
 
 
 
@@ -84,9 +89,9 @@ class DataListener(Node):
         self.current_state = 'rest'
         self.state_start_time = self.start_time
         self.protocol = [
-            ('rest_heavy_horizontal', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
-            ('flexion_heavy_horizontal', 4),
-            ('extension_heavy_horizontal', 4),
+            ('rest_heavy_vertical', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
+            ('flexion_heavy_vertical', 4),
+            ('extension_heavy_vertical', 4),
         ]
         self.protocol_index = 0
         self.state_transitions = []
@@ -95,29 +100,8 @@ class DataListener(Node):
         print(f"Starting protocol with {self.protocol[self.protocol_index][0]} for {self.protocol[self.protocol_index][1]} seconds.")
 
 
-
     def timestamp_callback(self, msg):
-        #self.get_logger().info(f'Timestamp: {msg}')
         self.timestamp_data = msg.y - msg.x #(current_time - start_time)
-        # if self.timestamp_flag_one == False:
-        #     self.timestamp_initial = [msg.sec, msg.nanosec]
-        #     self.timestamp_flag_one = True
-        # # Current timestamp in the message
-        # current_timestamp = [msg.sec, msg.nanosec]
-
-        # # Compute the elapsed time since the initial timestamp
-        # elapsed_sec = current_timestamp[0] - self.timestamp_initial[0]
-        # elapsed_nsec = current_timestamp[1] - self.timestamp_initial[1]
-
-        # # Normalize the difference
-        # if elapsed_nsec < 0:
-        #     # If nanoseconds are negative, borrow 1 second
-        #     elapsed_nsec += 1e9
-        #     elapsed_sec -= 1
-
-        # # Store the elapsed time in seconds and nanoseconds
-        # self.timestamp_data = [elapsed_sec, elapsed_nsec]
-
         self.new_timestamp_data = True
         self.update_protocol_state()
         self.log_and_save_data()
@@ -128,13 +112,11 @@ class DataListener(Node):
         self.log_and_save_data()
 
     def emg_filtered_callback(self, msg):
-        #self.get_logger().info(f'EMG Data: {msg}')
         self.emg_filtered_data = [msg.x, msg.y]
         self.new_emg_filtered_data = True
         self.log_and_save_data()
 
     def ln_acc_callback(self, msg):
-        #self.get_logger().info(f'Accelerometer Data: {msg}')
         self.ln_acc_data = [msg.x, msg.y, msg.z]
         self.new_ln_acc_data = True
         self.log_and_save_data()
@@ -142,7 +124,7 @@ class DataListener(Node):
     def features_callback(self, msg):
         self.features_data = msg.data
         self.new_features_data = True
-        self.log_and_save_data()
+        self.log_and_save_features()
 
     def update_protocol_state(self):
         current_time = time.time()
@@ -159,33 +141,44 @@ class DataListener(Node):
                 print(self.iteration)
                 self.iteration += 1
 
-                if self.iteration == 21:
+                if self.iteration == 51:
                     print("=========== STOP ===========")
 
+    def log_and_save_features(self):
+        if time.time() < self.delay_end_time:
+            return
+        
+        if self.new_features_data:
+            self.features_writer.writerow([self.features_data.tolist() + [self.current_state]])
+
+            self.new_features_data = False
+
+        else:
+            return
 
     def log_and_save_data(self):
         if time.time() < self.delay_end_time:
             return  # Skip logging and saving data during the delay period
         
         # Check if all data types have been updated
-        if self.new_timestamp_data and self.new_emg_raw_data and self.new_emg_filtered_data and self.new_ln_acc_data and self.new_features_data:
+        if self.new_timestamp_data and self.new_emg_raw_data and self.new_emg_filtered_data and self.new_ln_acc_data:
             # Log data
             #self.get_logger().info(f'Timestamp: {self.timestamp_data}, EMG_raw: {self.emg_raw_data}, EMG_filtered: {self.emg_filtered_data}, Acc: {self.acc_data}, Gyro: {self.gyro_data}, Mag: {self.mag_data}')
             # Save data to csv
-            self.writer.writerow([self.timestamp_data] + self.emg_raw_data + self.emg_filtered_data + self.ln_acc_data + self.features_data.tolist() + [self.current_state])
+            self.continuous_writer.writerow([self.timestamp_data] + self.emg_raw_data + self.emg_filtered_data + self.ln_acc_data + [self.current_state])
 
             self.new_timestamp_data = False
             self.new_emg_raw_data = False
             self.new_emg_filtered_data = False
             self.new_ln_acc_data = False
-            self.new_features_data = False
 
         else:
             return
         
     def __del__(self):
         # Close the file
-        self.file.close()
+        self.features_file.close()
+        self.continuous_file.close()
 
 
 def main(args=None):
