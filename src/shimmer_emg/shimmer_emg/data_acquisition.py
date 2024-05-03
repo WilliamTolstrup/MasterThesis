@@ -3,13 +3,14 @@
 from . import shimmer
 from . import util
 from geometry_msgs.msg import Vector3
-from scipy.signal import butter, lfilter, lfilter_zi
+from scipy.signal import butter, lfilter, lfilter_zi, iirnotch
 import rclpy
 from rclpy.node import Node
 import time
 import numpy as np
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32, Bool
 import pywt
+import pandas as pd
 
 class ShimmerDataNode(Node):
     def __init__(self):
@@ -21,14 +22,28 @@ class ShimmerDataNode(Node):
         # EMG
         self.pubEmgRaw      = self.create_publisher(Vector3, '/emg/emg_raw', 10)
         self.pubEmgFiltered = self.create_publisher(Vector3, '/emg/emg_filtered', 10)
+        self.pubEmgRectified = self.create_publisher(Vector3, '/emg/emg_rectified', 10)
+        self.pubEmgEnvelope = self.create_publisher(Vector3, '/emg/emg_envelope', 10)
+
         # IMU
         self.pubLnAcc       = self.create_publisher(Vector3, '/imu/ln_acc', 10) # Low noise accelerometer
 
         # Features
-        self.pubFeatures    = self.create_publisher(Float32MultiArray, '/shimmer/features', 10)
+        self.pubCh1Contraction = self.create_publisher(Bool, '/features/ch1_contractions', 10)
+        self.pubCh2Contraction = self.create_publisher(Bool, '/features/ch2_contractions', 10)
+        self.pubAccDerivative = self.create_publisher(Float32, '/features/AccDerivative', 10)
+        self.pubAngle = self.create_publisher(Float32, '/features/angle', 10)
+
+
+        individual_calibration = pd.read_csv('calibration.csv')
+        self.accel_y_max = max(individual_calibration['accel_y'].values)
+        self.accel_y_min = min(individual_calibration['accel_y'].values)
+        self.ch1_MVC = max(individual_calibration['ch1_envelope'].values)
+        self.ch2_MVC = max(individual_calibration['ch2_envelope'].values)
 
         # Window segmentation related
         self.Fs = 500 # Sampling rate
+        self.nyq = self.Fs/2 # Nyquist frequency
         self.window_size_samples = int(self.Fs * 0.16) # 80 ms window size
         self.window_overlap_samples = int(self.window_size_samples * 0.5) # 50% overlap
 
@@ -43,7 +58,6 @@ class ShimmerDataNode(Node):
         self.window_counter = 0
         self.countdown = 5
 
-        self.setup_filters() # EMG filters
         self.shimmer3 = self.setup_shimmer() # Connecting to shimmer, choosing sensors, etc, etc.
 
         self.timer = self.create_timer(0.01, self.sendDataLoop)
@@ -67,78 +81,103 @@ class ShimmerDataNode(Node):
 
         return shimmer3
 
-    def setup_filters(self):
-        # Bandpass, bandstop, and lowpass filter settings
-        Fco_bp = [10, self.Fs * 0.9] # 10, 450 Hz
-        Fco_bs = [47, 53]
-        Fco_lp = 350
-        order_bp = 10
-        order_lp = 4
-        order_bs = 6
-        normal_cutoff_bp = [f / (self.Fs) for f in Fco_bp]
-        normal_cutoff_bs = [f / (self.Fs) for f in Fco_bs]
-        normal_cutoff_lp = Fco_lp / (self.Fs)
-        self.b_bp, self.a_bp = butter(order_bp, normal_cutoff_bp, btype='bandpass', analog=False)
-        self.b_bs, self.a_bs = butter(order_bs, normal_cutoff_bs, btype='bandstop', analog=False)
-        self.b_lp, self.a_lp = butter(order_lp, normal_cutoff_lp, btype='lowpass', analog=False)
-        # Initial conditions for filters
-        self.zf_bp_ch1 = lfilter_zi(self.b_bp, self.a_bp)
-        self.zf_bs_ch1 = lfilter_zi(self.b_bs, self.a_bs)
-        self.zf_lp_ch1 = lfilter_zi(self.b_lp, self.a_lp)
-        # Copy initial conditions for a second channel
-        self.zf_bp_ch2 = self.zf_bp_ch1.copy()
-        self.zf_bs_ch2 = self.zf_bs_ch1.copy()
-        self.zf_lp_ch2 = self.zf_lp_ch1.copy()
+    def notch_filter(self, frequency=50, Q=30):
+        w0 = frequency / self.nyq
+        b_n, a_n = iirnotch(w0, Q)
+        return b_n, a_n
+
+    def butter_filter(self, cutoff, btype, order='2'):
+        normal_cutoff = cutoff / self.nyq
+        b, a = butter(order, normal_cutoff, btype=btype)
+        return b, a
+    
+    def filter_signal(self, data, b, a):
+        zi = lfilter_zi(b,a) * data[0]
+
+        filtered_data, _ = lfilter(b, a, data, zi=zi*data[0])
+        return filtered_data
+    
+    def emg_envelope(self, data):
+        # Notch filter at 50 Hz, with 30 quality
+        b_notch, a_notch = self.notch_filter()
+        filtered_emg = self.filter_signal(data, b_notch, a_notch)
+
+        # High-pass filter at 35 Hz
+        b_hp, a_hp = self.butter_filter(35, btype='high')
+        filtered_emg = self.filter_signal(filtered_emg, b_hp, a_hp)
+
+        # Full-wave rectification
+        rectified_emg = np.abs(filtered_emg)
+
+        # Low-pass filter at 4 Hz
+        b_lp, a_lp = self.butter_filter(4, btype='low')
+        envelope_emg = self.filter_signal(rectified_emg, b_lp, a_lp)
+
+        return envelope_emg, rectified_emg, filtered_emg
 
     # Feature functions
 
-    def mav(self, signal):                     # Mean Absolute Value
-        return np.mean(np.abs(signal))
-    
-    def rms(self, signal):                           # Root Mean Square Error
-        signal_array = np.array(signal) # numpy array is needed for element-wise operations
-        return np.sqrt(np.mean(signal_array**2))
-    
-    def sd(self, signal):                            # Standard deviation
-        return np.std(signal)
-    
-    def wl(self, signal):                            # Wavelength
-        return np.sum(np.abs(np.diff(signal)))
-
-    def derivative(self, signal):                    # Jerk
-        return np.diff(signal).astype(float)
-
-
-    def wavelet_features(self, signal, wavelet_name='db4', max_decomposition_level=4, num_features=4):
+    def calculate_derivative(self, current_value, previous_value, current_time, previous_time):
         """
-        Extract top N largest wavelet features based on magnitude.
+        Calculate the derivative of a signal using current and previous sensor readings along with their timestamps.
+        
+        Parameters:
+        current_value (float): Current sensor reading.
+        previous_value (float): Previous sensor reading.
+        current_time (float): Current timestamp when the reading was taken.
+        previous_time (float): Previous timestamp when the last reading was taken.
+        
+        Returns:
+        float: The derivative of the signal, or None if time difference is zero or input is invalid.
+        """
+        if previous_value is None or previous_time is None:
+            # No previous data to compare with, so derivative cannot be computed
+            return None
+        
+        delta_value = current_value - previous_value
+        delta_time = current_time - previous_time
+        
+        if delta_time > 0:
+            return delta_value / delta_time
+        else:
+            # Avoid division by zero; return None and handle this case appropriately in the calling code
+            return None
 
-        Args:
-        signal (list or np.ndarray): Input signal.
-        wavelet_name (str): Wavelet type.
-        max_decomposition_level (int): Maximum decomposition level.
-        num_features (int): Number of largest features to retain. It is double the selected number (not sure why)
+
+    def estimate_angle(self, accel_y, min_accel=-6, max_accel=8, min_angle=0, max_angle=150):
+        """
+        Estimate the angle based on accelerometer y-channel data using linear interpolation.
+
+        Parameters:
+        accel_y (float): Current accelerometer y-channel reading.
+        min_accel (float): Minimum accelerometer y value corresponding to the minimum angle. Default -6
+        max_accel (float): Maximum accelerometer y value corresponding to the maximum angle. Default +8
+        min_angle (float): Minimum angle, typically representing full extension.             Default  0   degrees
+        max_angle (float): Maximum angle, typically representing full flexion.               Default  150 degrees
 
         Returns:
-        list: Reduced set of wavelet coefficients.
+        float: Estimated angle in degrees.
         """
-        if not signal:
-            return []
+        # Calculate the proportion of the way accel_y is between min_accel and max_accel
+        proportion = (accel_y - min_accel) / (max_accel - min_accel)
 
-        # Wavelet transform
-        wavelet = pywt.Wavelet(wavelet_name)
-        coefficients = pywt.wavedec(signal, wavelet, level=min(max_decomposition_level, pywt.dwt_max_level(len(signal), wavelet)))
-
-        # Flatten the list of coefficients and sort by absolute value
-        flattened_coeffs = np.concatenate([np.array(coeff).flatten() for coeff in coefficients])
-        largest_indices = np.argsort(np.abs(flattened_coeffs))[-num_features:]
-
-        # Select the top N largest coefficients by magnitude
-        largest_coeffs = flattened_coeffs[largest_indices]
-
-        return largest_coeffs.tolist()
+        # Interpolate this proportion linearly between min_angle and max_angle
+        angle = min_angle + proportion * (max_angle - min_angle)
+        return angle
 
 
+    def detect_activation(envelope, threshold):
+        """
+        Detect if the EMG envelope indicates muscle activation above a specified threshold.
+        
+        Parameters:
+        envelope (float): Current envelope value.
+        threshold (float): Activation threshold.
+        
+        Returns:
+        bool: True if the envelope exceeds the threshold, False otherwise.
+        """
+        return envelope > threshold
 
 
     def sendDataLoop(self):
@@ -146,8 +185,13 @@ class ShimmerDataNode(Node):
             timestampMsg = Vector3()
             emg_raw_msg      = Vector3()
             emg_filtered_msg = Vector3()
+            emg_rectified_msg = Vector3()
+            emg_envelope_msg = Vector3()
+            emg_contraction_ch1_msg = Bool()
+            emg_contraction_ch2_msg = Bool()
             ln_accMsg = Vector3()
-            featureMsg = Float32MultiArray()
+            acc_derivative_msg = Float32()
+            angle_estimate_msg = Float32()
             while True:
                 n_of_packets, packets = self.shimmer3.read_data_packet_extended(calibrated=True)
                 if n_of_packets > 0:
@@ -162,121 +206,95 @@ class ShimmerDataNode(Node):
                     ###                  DATA PROCESSING                  ###
                     #########################################################
 
-                    # Step 1: Bandpass filter
-                    bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [calibrated_ch1], zi=self.zf_bp_ch1)
-                    bp_ch2, self.zf_bp_ch2 = lfilter(self.b_bp, self.a_bp, [calibrated_ch2], zi=self.zf_bp_ch2)
+                    ###################################
+                    ###             EMG             ###
+                    ###################################
 
-                    # Step 2: Bandstop filter
-                    bs_ch1, self.zf_bs_ch1 = lfilter(self.b_bs, self.a_bs, bp_ch1, zi=self.zf_bs_ch1)
-                    bs_ch2, self.zf_bs_ch2 = lfilter(self.b_bs, self.a_bs, bp_ch2, zi=self.zf_bs_ch2)
+                    ch1_envelope, ch1_rectified, ch1_filtered = self.emg_envelope(calibrated_ch1)
+                    ch2_envelope, ch2_rectified, ch2_filtered = self.emg_envelope(calibrated_ch2)
 
-                    # Step 3: Lowpass filter
-                    lp_ch1, self.zf_lp_ch1 = lfilter(self.b_lp, self.a_lp, bs_ch1, zi=self.zf_lp_ch1)
-                    lp_ch2, self.zf_lp_ch2 = lfilter(self.b_lp, self.a_lp, bs_ch2, zi=self.zf_lp_ch2)
-
-                    # Assign filtered values
-                    emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
-                    emg_filtered_msg.y = lp_ch2[0]  # Same here
+                    # Check if contraction is above a threshold. Returns True or False
+                    ch1_contraction = self.detect_activation(ch1_envelope, (self.ch1_MVC/3)) # Threshold is 1/3 of maximum contraction
+                    ch2_contraction = self.detect_activation(ch2_envelope, (self.ch2_MVC/3))
 
                     # Assign unfiltered values
                     emg_raw_msg.x = float(calibrated_ch1)
                     emg_raw_msg.y = float(calibrated_ch2)
+                    
+                    # Assign filtered values
+                    emg_filtered_msg.x = ch1_filtered[0]  # lfilter returns a list, take the first element
+                    emg_filtered_msg.y = ch2_filtered[0]  # Same here
+
+                    # Assign rectified values
+                    emg_rectified_msg.x = ch1_rectified[0]
+                    emg_rectified_msg.y = ch2_rectified[0]
+
+                    # Assign envelope
+                    emg_envelope_msg.x = ch1_envelope[0]
+                    emg_envelope_msg.y = ch2_envelope[0]
+
+                    # Assign contractions (feature)
+                    emg_contraction_ch1_msg.data = ch1_contraction
+                    emg_contraction_ch2_msg.data = ch2_contraction
+
+                    ###################################
+                    ###        Accelerometer        ###
+                    ###################################
+
+                    # Derivative of Accel y (feature)
+                    acc_y_derivative = self.calculate_derivative(calibrated_ln_accy, previous_ln_accy, ts_current, previous_ts_current)
+                    previous_ln_accy = calibrated_ln_accy
+                    previous_ts_current = ts_current
+
+                    # Estimated angle based on accelerometer data (feature)
+                    elbow_angle = self.estimate_angle(calibrated_ln_accy, min_accel=self.accel_y_min, max_accel=self.accel_y_max)
 
                     # Assign accel values
                     ln_accMsg.x = float(calibrated_ln_accx)
                     ln_accMsg.y = float(calibrated_ln_accy)
                     ln_accMsg.z = float(calibrated_ln_accz)
 
-                    # Timestamp
+                    acc_derivative_msg.data = float(acc_y_derivative)
+                    angle_estimate_msg.data = float(elbow_angle)
+
+                    ###################################
+                    ###          Timestamp          ###
+                    ###################################
+
+                    # Assign Timestamp
                     timestampMsg.x = ts_start
                     timestampMsg.y = ts_current
 
-                    #########################################################
-                    ###            DATA ACCUMULATION FOR WINDOW           ###
-                    #########################################################
 
-                    self.emg_raw_buffer_ch1.append(calibrated_ch1)
-                    self.emg_raw_buffer_ch2.append(calibrated_ch2)
-                    self.emg_filtered_buffer_ch1.append(lp_ch1)
-                    self.emg_filtered_buffer_ch2.append(lp_ch2)
-                    self.acc_buffer_x.append(calibrated_ln_accx)
-                    self.acc_buffer_y.append(calibrated_ln_accy)
-                    self.acc_buffer_z.append(calibrated_ln_accz)
-                    
+                    ###################################
+                    ###          Countdown          ###
+                    ###################################
 
-                    self.window_counter += 1
+                    if ts_current - ts_start < 5:
+                        print(self.countdown)
+                        if self.countdown > 0:
+                            self.countdown -= 1
+                        else:
+                            self.countdown = None
 
-                    if self.window_counter >= self.window_size_samples:
-                        # Compute features for the window
-                        
-                        emg_raw_features      = [
-                            self.mav(self.emg_raw_buffer_ch1), self.mav(self.emg_raw_buffer_ch2),      
-                            self.rms(self.emg_raw_buffer_ch1), self.rms(self.emg_raw_buffer_ch2),      
-                            self.sd(self.emg_raw_buffer_ch1), self.sd(self.emg_raw_buffer_ch2),      
-                            self.wl(self.emg_raw_buffer_ch1), self.wl(self.emg_raw_buffer_ch2)]
-
-                        raw_wavelet_features_ch1 = self.wavelet_features(self.emg_raw_buffer_ch1)
-                        raw_wavelet_features_ch2 = self.wavelet_features(self.emg_raw_buffer_ch2)
-
-                        emg_raw_features.extend(raw_wavelet_features_ch1)
-                        emg_raw_features.extend(raw_wavelet_features_ch2)
-                        
-                        emg_filtered_features = [
-                            self.mav(self.emg_filtered_buffer_ch1), self.mav(self.emg_filtered_buffer_ch2), 
-                            self.rms(self.emg_filtered_buffer_ch1), self.rms(self.emg_filtered_buffer_ch2), 
-                            self.sd(self.emg_filtered_buffer_ch1), self.sd(self.emg_filtered_buffer_ch2), 
-                            self.wl(self.emg_filtered_buffer_ch1), self.wl(self.emg_filtered_buffer_ch2)]
-                        
-                        filt_wavelet_features_ch1 = self.wavelet_features(self.emg_filtered_buffer_ch1)#.tolist()
-                        filt_wavelet_features_ch2 = self.wavelet_features(self.emg_filtered_buffer_ch2)#.tolist()
-
-                        emg_filtered_features.extend(filt_wavelet_features_ch1)
-                        emg_filtered_features.extend(filt_wavelet_features_ch2)
-                        
-                        imu_features = [
-                            self.mav(self.acc_buffer_x), self.mav(self.acc_buffer_y), self.mav(self.acc_buffer_z),  
-                            self.rms(self.acc_buffer_x), self.rms(self.acc_buffer_y), self.rms(self.acc_buffer_z),  
-                            self.sd(self.acc_buffer_x), self.sd(self.acc_buffer_y), self.sd(self.acc_buffer_z)]#,
-#                            self.derivative(self.acc_buffer_x), self.derivative(self.acc_buffer_y), self.derivative(self.acc_buffer_z)]
-
-                        # Slide the window
-                        # self.window_overlap_samples is half the window_size_samples, so we keep half of the window.
-                        start_index = self.window_size_samples - self.window_overlap_samples
-                        self.emg_raw_buffer_ch1 = self.emg_raw_buffer_ch1[start_index:]
-                        self.emg_raw_buffer_ch2 = self.emg_raw_buffer_ch2[start_index:]
-                        self.emg_filtered_buffer_ch1 = self.emg_filtered_buffer_ch1[start_index:]
-                        self.emg_filtered_buffer_ch2 = self.emg_filtered_buffer_ch2[start_index:]
-                        self.acc_buffer_x = self.acc_buffer_x[start_index:]
-                        self.acc_buffer_y = self.acc_buffer_y[start_index:]
-                        self.acc_buffer_z = self.acc_buffer_z[start_index:]
-                        self.window_counter -= self.window_overlap_samples
-
-                        #########################################################
-                        ###                  PUBLISH FEATURES                 ###
-                        #########################################################
-
-                    # With raw emg    # emg_raw_mav_ch1, emg_raw_mav_ch2, emg_raw_rms_ch1, emg_raw_rms_ch2, emg_raw_sd_ch1, emg_raw_sd_ch2, emg_raw_wl_ch1, emg_raw_wl_ch1,    emg_filtered_mav_ch1, emg_filtered_mav_ch2, emg_filtered_rms_ch1, emg_filtered_rms_ch2, emg_filtered_sd_ch1, emg_filtered_sd_ch2, emg_filtered_wl_ch1, emg_filtered_wl_ch1, emg_filtered_wavelet_coefficients_ch1, emg_filtered_wavelet_coefficients_ch2,    acc_mav_x, acc_mav_y, acc_mav_z, acc_rms_x, acc_rms_y, acc_rms_z, acc_sd_x, acc_sd_y, acc_sd_z, acc_variance_x, acc_variance_y, acc_variance_z, acc_ptp_x, acc_ptp_y, acc_ptp_z, acc_sma
-                        # emg_filtered_mav_ch1, emg_filtered_mav_ch2, emg_filtered_rms_ch1, emg_filtered_rms_ch2, emg_filtered_sd_ch1, emg_filtered_sd_ch2, emg_filtered_wl_ch1, emg_filtered_wl_ch1, emg_filtered_wavelet_coefficients_ch1, emg_filtered_wavelet_coefficients_ch2,    acc_mav_x, acc_mav_y, acc_mav_z, acc_rms_x, acc_rms_y, acc_rms_z, acc_sd_x, acc_sd_y, acc_sd_z, acc_variance_x, acc_variance_y, acc_variance_z, acc_ptp_x, acc_ptp_y, acc_ptp_z, acc_sma
-                        
-                        # Total 48 features (18, 18, 18)
-                        # Currently a problem with the Float32MultiArray and how I publish the features, not important for checking the EMG channels. I'm working on it.
-                        featureMsg.data = emg_filtered_features + imu_features#emg_raw_features + emg_filtered_features + imu_features
-                        self.pubFeatures.publish(featureMsg)
-
-                        if ts_current - ts_start < 5:
-                            print(self.countdown)
-                            if self.countdown > 0:
-                                self.countdown -= 1
-
-                            if self.countdown == 0:
-                                print("   ---   Record!   ---   ")
+                        if self.countdown == 0:
+                            print("   ---   Record!   ---   ")
 
                     
-                    # Publish
+                    ###################################
+                    ###           Publish           ###
+                    ###################################
+
                     self.pubTimestamp.publish(timestampMsg)
-                    self.pubLnAcc.publish(ln_accMsg)
                     self.pubEmgRaw.publish(emg_raw_msg)
                     self.pubEmgFiltered.publish(emg_filtered_msg)
+                    self.pubEmgRectified.publish(emg_rectified_msg)
+                    self.pubEmgEnvelope.publish(emg_envelope_msg)
+                    self.pubCh1Contraction.publish(emg_contraction_ch1_msg)
+                    self.pubCh2Contraction.publish(emg_contraction_ch2_msg)
+                    self.pubLnAcc.publish(ln_accMsg)
+                    self.pubAccDerivative.publish(acc_derivative_msg)
+                    self.pubAngle.publish(angle_estimate_msg)
 
         except KeyboardInterrupt:
             self.shimmer3.stop_bt_streaming()
