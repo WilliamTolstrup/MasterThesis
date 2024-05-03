@@ -44,18 +44,8 @@ class ShimmerDataNode(Node):
         # Window segmentation related
         self.Fs = 500 # Sampling rate
         self.nyq = self.Fs/2 # Nyquist frequency
-        self.window_size_samples = int(self.Fs * 0.16) # 80 ms window size
-        self.window_overlap_samples = int(self.window_size_samples * 0.5) # 50% overlap
 
-        # Init buffers and window counter
-        self.emg_raw_buffer_ch1 = []
-        self.emg_raw_buffer_ch2 = []
-        self.emg_filtered_buffer_ch1 = []
-        self.emg_filtered_buffer_ch2 = []
-        self.acc_buffer_x = []
-        self.acc_buffer_y = []
-        self.acc_buffer_z = []
-        self.window_counter = 0
+        # Wait 5 seconds before record command
         self.countdown = 5
 
         self.shimmer3 = self.setup_shimmer() # Connecting to shimmer, choosing sensors, etc, etc.
@@ -172,7 +162,7 @@ class ShimmerDataNode(Node):
         
         Parameters:
         envelope (float): Current envelope value.
-        threshold (float): Activation threshold.
+        threshold (float): Activation threshold. Threshold is 1/3 of MVC for each muscle
         
         Returns:
         bool: True if the envelope exceeds the threshold, False otherwise.
