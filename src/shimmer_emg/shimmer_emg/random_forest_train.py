@@ -10,11 +10,11 @@ import numpy as np
 df = pd.read_csv('features_file.csv')
 
 # Select the desired feature columns
-feature_cols = ['emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
-                'emg_raw_rms_ch1', 'emg_raw_rms_ch2',
-                'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
-                'emg_raw_wl_ch1', 'emg_raw_wl_ch2',
-                'raw_coeff_1', 'raw_coeff_2', 'raw_coeff_3', 'raw_coeff_4', 'raw_coeff_5', 'raw_coeff_6', 'raw_coeff_7', 'raw_coeff_8',
+feature_cols = [#'emg_raw_mav_ch1', 'emg_raw_mav_ch2', 
+                #'emg_raw_rms_ch1', 'emg_raw_rms_ch2',
+                #'emg_raw_sd_ch1', 'emg_raw_sd_ch2', 
+                #'emg_raw_wl_ch1', 'emg_raw_wl_ch2',
+                #'raw_coeff_1', 'raw_coeff_2', 'raw_coeff_3', 'raw_coeff_4', 'raw_coeff_5', 'raw_coeff_6', 'raw_coeff_7', 'raw_coeff_8',
                 'emg_filtered_mav_ch1', 'emg_filtered_mav_ch2', 
                 'emg_filtered_rms_ch1', 'emg_filtered_rms_ch2', 
                 'emg_filtered_sd_ch1', 'emg_filtered_sd_ch2',
