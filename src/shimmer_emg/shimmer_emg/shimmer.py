@@ -2294,7 +2294,7 @@ class Shimmer3:
         """
         adc_sensitivity = 2420/12 / (2 ** 23 - 1)
         offset = 0
-        calibrated = ((raw_data - offset) * adc_sensitivity) / util.ExG_GAINS_FROM_BYTE_TO_VALUE[self._exg_gain]
+        calibrated = ((raw_data - offset) * adc_sensitivity)# / util.ExG_GAINS_FROM_BYTE_TO_VALUE[self._exg_gain]
         return calibrated
 
     @staticmethod
