@@ -3,117 +3,164 @@ import time
 import joblib
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Float32
+from geometry_msgs.msg import Vector3
 import numpy as np
 
 # Motor Driver GPIO Pins
 IN1 = 17  # Example GPIO pin
 IN2 = 27  # Example GPIO pin
 
-# Encoder GPIO Pins
-CLK = 5   # Example GPIO pin
-DT = 6    # Example GPIO pin
+CLK = 5
+DT = 6
 
 # Setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
-GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-# Initialize PWM for both IN1 and IN2
-pwm_forward = GPIO.PWM(IN1, 1000)  # Initialize PWM on IN1 1000Hz frequency
-pwm_backward = GPIO.PWM(IN2, 1000)  # Initialize PWM on IN2 1000Hz frequency
-
-# Start PWM with 0% duty cycle (motor off)
-pwm_forward.start(0)
-pwm_backward.start(0)
-
-# Global Variables for Encoder
-#clkLastState = GPIO.input(CLK)
-#counter = 0
-
-def motor_control(action, speed=10):
-    if action == "forward":
-        pwm_forward.ChangeDutyCycle(speed)
-        pwm_backward.ChangeDutyCycle(0)
-    elif action == "backward":
-        pwm_forward.ChangeDutyCycle(0)
-        pwm_backward.ChangeDutyCycle(speed)
-    elif action == "stop":
-        pwm_forward.ChangeDutyCycle(0)
-        pwm_backward.ChangeDutyCycle(0)
 
 # Load SVM model and scaler
 svm_model = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/svm_model.pk1')
 scaler = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/scaler.pk1')
 
-# TODO: Get this working again
-# def read_encoder():
-#     global clkLastState
-#     global counter
-#     clkState = GPIO.input(CLK)
-#     dtState = GPIO.input(DT)
-#     if clkState != clkLastState:
-#         if dtState != clkState:
-#             counter += 1
-#         else:
-#             counter -= 1
-#         print("Counter: ", counter)
-#     clkLastState = clkState
-#     time.sleep(0.01)  # Debounce time
+class PIDController:
+    def __init__(self, kp, ki, kd, sample_time):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.sample_time = sample_time
+        self.clear()
+
+    def clear(self):
+        self.setpoint = 0.0
+        self.PV = 0.0
+        self.last_time = time.time()
+        self.integral = 0.0
+        self.derivative = 0.0
+        self.last_error = 0.0
+        self.output = 0.0
+
+    def update(self, setpoint, PV):
+        delta_time = time.time() - self.last_time
+        if delta_time >= self.sample_time:
+            error = setpoint - PV
+            self.integral += error * delta_time
+            self.derivative = (error - self.last_error) / delta_time
+            self.output = (self.kp * error) + (self.ki * self.integral) + (self.kd * self.derivative)
+            self.last_error = error
+            self.last_time = time.time()
+        return self.output
 
 class MotorControlNode(Node):
     def __init__(self):
         super().__init__('motor_control_node')
-        self.subscription = self.create_subscription(Float32MultiArray, '/shimmer/features', self.listener_callback, 10)
-        self.current_state = None
+        self.pid = PIDController(kp=0.1, ki=0.01, kd=0.05, sample_time=0.01)
+        self.features_subscriber = self.create_subscription(Float32MultiArray, '/features/feature_list', self.feature_callback, 10)
+        self.emg_envelope_subscriber = self.create_subscription(Vector3, '/emg/emg_envelope', self.emg_envelope_callback, 10)
+        self.acc_derivative_subscriber = self.create_subscription(Float32, '/features/AccDerivative', self.acc_derivative_callback, 10)
+        self.angle_estimate_subscriber = self.create_subscription(Float32, '/features/angle', self.angle_callback, 10)
 
-    def listener_callback(self, feature_msg):
-        features = feature_msg.data
-        features = np.array(features).reshape(1,-1)
-        scaled_features = scaler.transform(features)
-        new_state = svm_model.predict(scaled_features)[0]
+        # Init struggle detection
+        self.struggle_detected = False
+        self.last_emg_envelope = 0
+        self.last_derivative = 0
 
-        print("OG features")
-        print(features)
-        print("Scaled features")
-        print(scaled_features)
-        self.signal_strength = 10 # Debug
-#        self.signal = (features[0] + features[1]) / 2  # Raw MAV EMG ch1 and ch2   #TODO: Testing if this is fine, of if I should subscribe to raw/filtered emg, too, and use that
-        #self.signal = (features[9] + features[10]) / 2 # Filtered MAV EMG ch1 and ch2
+        # Safe angle limits
+        self.min_angle = 0
+        self.max_angle = 150
 
-        # Thresholds are stand-ins right now, as I haven't tested regular signal strengths.
+        # Initialize PWM for both IN1 and IN2
+        self.pwm_forward = GPIO.PWM(IN1, 1000)  # Initialize PWM on IN1 1000Hz frequency
+        self.pwm_backward = GPIO.PWM(IN2, 1000)  # Initialize PWM on IN2 1000Hz frequency
+        self.pwm_forward.start(0)
+        self.pwm_backward.start(0)
 
- #       if self.signal <= 10:
- #           self.signal_strength = 100
- #       elif self.signal <= 30:
- #           self.signal_strength = 75
- #       elif self.signal <= 50:
- #           self.signal_strength = 50
- #       elif self.signal <= 70:
- #           self.signal_strength = 25
- #       elif self.signal > 70:
- #           self.signal_strength = 10 # TODO: Not sure if should be 0, need to test!!! 
+        # Encoder setup
+        self.encoder_position = 0
+        self.last_clk_state = GPIO.input(CLK)
+        GPIO.add_event_detect(CLK, GPIO.BOTH, callback=self.read_encoder)
 
-        print("Predicted state: ")
-        print(self.current_state)
+    def read_encoder(self, channel):
+        clk_state = GPIO.input(CLK)
+        dt_state = GPIO.input(DT)
+        if clk_state != self.last_clk_state:
+            if dt_state != clk_state:
+                self.encoder_position += 1
+            else:
+                self.encoder_position -= 1
+        self.last_clk_state = clk_state
 
-        if new_state != self.current_state:
-            self.current_state = new_state
-            self.control_motor(self.current_state, self.signal_strength)
+    def emg_envelope_callback(self, msg):
+        average_envelope = (msg.x + msg.y) / 2
+        self.last_emg_envelope = average_envelope
+        self.evaluate_control_strategy()
 
-    def control_motor(self, state, signal_strength):
-        # Adjust speed based on signal strength
-        speed = max(0, min(100, signal_strength))
+    def acc_derivative_callback(self, msg):
+        self.last_derivative = msg.data
+        self.evaluate_control_strategy()
 
-        if state == 'flexion_heavy_vertical' or state == 'flexion_light_vertical' or state == 'flexion_heavy_horizontal' or state == 'flexion_light_horizontal':
-            motor_control("forward", speed)
-        elif state == 'extension_heavy_vertical' or state == 'extension_light_vertical' or state == 'extension_heavy_horizontal' or state == 'extension_light_horizontal':
-            motor_control("backward", speed)
+    def evaluate_control_strategy(self):
+        # Adjust motor speed based on the context
+        if self.last_emg_envelope > 5e-06 and abs(self.last_derivative) < 1:
+            self.struggle_detected = True
         else:
-            motor_control("stop")
+            self.struggle_detected = False
 
+        if self.struggle_detected:
+            # Increase support if struggling
+            self.target_speed = 50
+        else:
+            # Normal adaptive speed calculation
+            derivative_effect = np.clip(self.last_derivative * 10, -50, 50)
+            envelope_effect = max(0, 100 - self.last_emg_envelope * 100)
+            self.target_speed = 10 + derivative_effect - envelope_effect
+
+        self.update_motor()
+
+    def angle_callback(self, msg):
+        angle = msg.data
+        if angle < self.min_angle or angle > self.max_angle:
+            self.stop_motor_due_to_safety()
+
+    def stop_motor_due_to_safety(self):
+        # Stops the motor if the elbow angle is out of the safe range
+        self.pwm_forward.ChangeDutyCycle(0)
+        self.pwm_backward.ChangeDutyCycle(0)
+        print("Motor stopped because elbow angle exceeded limit")
+
+    def feature_callback(self, feature_msg):
+        features = np.array(feature_msg.data).reshape(1, -1)
+        scaled_features = scaler.transform(features)
+        predicted_state = svm_model.predict(scaled_features)[0]
+
+        # Update motor direction based on SVM state prediction
+        if predicted_state == 'flexion_heavy_vertical':
+            self.current_direction = 'forward'
+        elif predicted_state == 'extension_heavy_vertical':
+            self.current_direction = 'backward'
+        else:
+            self.current_direction = 'stop'
+        self.update_motor()
+
+    def measure_current_speed(self):
+        # Placeholder - convert encoder counts to actual speed
+        return self.encoder_position / time.monotonic()  # Simplified example
+
+    def update_motor(self):
+        measured_speed = self.measure_current_speed()
+        pid_output = self.pid.update(self.target_speed, measured_speed)
+        adjusted_speed = max(0, min(100, abs(pid_output)))
+
+        # Set motor PWM based on current direction and dynamically adjusted speed
+        if self.current_direction == 'forward':
+            self.pwm_forward.ChangeDutyCycle(adjusted_speed)
+            self.pwm_backward.ChangeDutyCycle(0)
+        elif self.current_direction == 'backward':
+            self.pwm_forward.ChangeDutyCycle(0)
+            self.pwm_backward.ChangeDutyCycle(adjusted_speed)
+        else:
+            self.pwm_forward.ChangeDutyCycle(0)
+            self.pwm_backward.ChangeDutyCycle(0)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -121,7 +168,6 @@ def main(args=None):
     rclpy.spin(motor_control_node)
     motor_control_node.destroy_node()
     rclpy.shutdown()
-    GPIO.cleanup()
 
 if __name__ == '__main__':
     main()

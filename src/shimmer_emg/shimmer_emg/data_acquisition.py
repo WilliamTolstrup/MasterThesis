@@ -8,9 +8,10 @@ import rclpy
 from rclpy.node import Node
 import time
 import numpy as np
-from std_msgs.msg import Float32, Bool
-import pywt
+from std_msgs.msg import Float32, Bool, Float32MultiArray
 import pandas as pd
+import os
+from collections import deque
 
 class ShimmerDataNode(Node):
     def __init__(self):
@@ -29,17 +30,48 @@ class ShimmerDataNode(Node):
         self.pubLnAcc       = self.create_publisher(Vector3, '/imu/ln_acc', 10) # Low noise accelerometer
 
         # Features
-        self.pubCh1Contraction = self.create_publisher(Bool, '/features/ch1_contractions', 10)
-        self.pubCh2Contraction = self.create_publisher(Bool, '/features/ch2_contractions', 10)
+        self.pubContraction = self.create_publisher(Vector3, '/features/contractions', 10)
         self.pubAccDerivative = self.create_publisher(Float32, '/features/AccDerivative', 10)
         self.pubAngle = self.create_publisher(Float32, '/features/angle', 10)
 
+        self.pubFeatures = self.create_publisher(Float32MultiArray, '/features/feature_list', 10)
 
-        individual_calibration = pd.read_csv('calibration.csv')
-        self.accel_y_max = max(individual_calibration['accel_y'].values)
-        self.accel_y_min = min(individual_calibration['accel_y'].values)
-        self.ch1_MVC = max(individual_calibration['ch1_envelope'].values)
-        self.ch2_MVC = max(individual_calibration['ch2_envelope'].values)
+
+        # Individual calibration
+        self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
+        self.data_file_exists = os.path.isfile(self.data_filepath)
+
+        if self.data_file_exists:
+            individual_calibration = pd.read_csv(self.data_filepath)
+            self.accel_y_max = individual_calibration['max_acc_y'].values
+            self.accel_y_min = individual_calibration['min_acc_y'].values
+            self.ch1_MVC = individual_calibration['max_mvc_ch1'].values
+            self.ch2_MVC = individual_calibration['max_mvc_ch2'].values
+            self.ch1_MinVC = individual_calibration['minvc_ch1'].values
+            self.ch2_MinVC = individual_calibration['minvc_ch2'].values
+            print()
+            print("==================================")
+            print("Individual calibration: ")
+            print(f"Max Accel Y: {self.accel_y_max}")
+            print(f"Min Accel Y: {self.accel_y_min}")
+            print(f"Ch1 MVC: {self.ch1_MVC}")
+            print(f"Ch1 MVC: {self.ch2_MVC}")
+            print(f"Ch1 MinVC: {self.ch1_MinVC}")
+            print(f"Ch2 MinVC: {self.ch2_MinVC}")
+            print("==================================")
+            print()
+        else:
+            print("No individual calibration available, using default values")
+
+            self.accel_y_max = 10.233483447510377
+            self.accel_y_min = -8.946667585220526
+            self.ch1_MVC = 4.562029076400025e-06
+            self.ch2_MVC = 2.8779783481736706e-06
+            self.ch1_MinVC = 3.5377742130598964e-07
+            self.ch2_MinVC = 7.65491880537546e-08
+
+        self.ch1_threshold = self.setup_envelope_threshold(self.ch1_MinVC, self.ch1_MVC, 0.12) # k = 0.12 -> 12% above minvc towards mvc
+        self.ch2_threshold = self.setup_envelope_threshold(self.ch2_MinVC, self.ch2_MVC, 0.08) # Same here
 
         # Window segmentation related
         self.Fs = 500 # Sampling rate
@@ -49,8 +81,13 @@ class ShimmerDataNode(Node):
         self.countdown = 5
 
         self.shimmer3 = self.setup_shimmer() # Connecting to shimmer, choosing sensors, etc, etc.
+        self.setup_filters()
 
         self.timer = self.create_timer(0.01, self.sendDataLoop)
+
+    def setup_envelope_threshold(self, minvc, mvc, k):
+        return minvc + k * (mvc - minvc)
+
 
     def setup_shimmer(self):
         TYPE = util.SHIMMER_ExG_0
@@ -61,7 +98,7 @@ class ShimmerDataNode(Node):
         shimmer3.set_sampling_rate(500.0)
 
         shimmer3.set_enabled_sensors(util.SENSOR_ExG1_24BIT, util.SENSOR_LOW_NOISE_ACCELEROMETER)
-        gain = util.ExG_GAIN_12  # gain
+        gain = util.ExG_GAIN_12  # gain is 12 for EMG
         shimmer3.exg_send_emg_settings(gain)
         shimmer3.print_object_properties()
         
@@ -71,104 +108,34 @@ class ShimmerDataNode(Node):
 
         return shimmer3
 
-    def notch_filter(self, frequency=50, Q=30):
-        w0 = frequency / self.nyq
-        b_n, a_n = iirnotch(w0, Q)
-        return b_n, a_n
+    def setup_filters(self):
+        # Filter frequency cutoffs and orders. Abreviations: Fco_bp = Filter cutoff bandpass
+        Fco_bp = [10, self.Fs * 0.9]  # Bandpass cutoff: 10 Hz and 450 Hz
+        Fco_bs = [47, 53]             # Bandstop cutoffs for line noise removal (usually 50 Hz) # Acts as the notch filter
+        Fco_lp = 350                  # Lowpass cutoff for noise removal above 350 Hz
+        order_bp = 10                 # Order for bandpass filter
+        order_bs = 6                  # Order for bandstop filter
+        order_lp = 4                  # Order for lowpass filter
 
-    def butter_filter(self, cutoff, btype, order='2'):
-        normal_cutoff = cutoff / self.nyq
-        b, a = butter(order, normal_cutoff, btype=btype)
-        return b, a
+        # Normalized cutoff frequencies for filters
+        normal_cutoff_bp = [f / (self.Fs) for f in Fco_bp]  # Normalize for bandpass
+        normal_cutoff_bs = [f / (self.Fs) for f in Fco_bs]  # Normalize for bandstop
+        normal_cutoff_lp = Fco_lp / (self.Fs)               # Normalize for lowpass
     
-    def filter_signal(self, data, b, a):
-        zi = lfilter_zi(b,a) * data[0]
+        # Create filter coefficients for each filter type
+        self.b_bp, self.a_bp = butter(order_bp, normal_cutoff_bp, btype='bandpass', analog=False)
+        self.b_bs, self.a_bs = butter(order_bs, normal_cutoff_bs, btype='bandstop', analog=False)
+        self.b_lp, self.a_lp = butter(order_lp, normal_cutoff_lp, btype='lowpass', analog=False)
 
-        filtered_data, _ = lfilter(b, a, data, zi=zi*data[0])
-        return filtered_data
-    
-    def emg_envelope(self, data):
-        # Notch filter at 50 Hz, with 30 quality
-        b_notch, a_notch = self.notch_filter()
-        filtered_emg = self.filter_signal(data, b_notch, a_notch)
+        # Initialize filter initial conditions for channel 1
+        self.zf_bp_ch1 = lfilter_zi(self.b_bp, self.a_bp)
+        self.zf_bs_ch1 = lfilter_zi(self.b_bs, self.a_bs)
+        self.zf_lp_ch1 = lfilter_zi(self.b_lp, self.a_lp)
 
-        # High-pass filter at 35 Hz
-        b_hp, a_hp = self.butter_filter(35, btype='high')
-        filtered_emg = self.filter_signal(filtered_emg, b_hp, a_hp)
-
-        # Full-wave rectification
-        rectified_emg = np.abs(filtered_emg)
-
-        # Low-pass filter at 4 Hz
-        b_lp, a_lp = self.butter_filter(4, btype='low')
-        envelope_emg = self.filter_signal(rectified_emg, b_lp, a_lp)
-
-        return envelope_emg, rectified_emg, filtered_emg
-
-    # Feature functions
-
-    def calculate_derivative(self, current_value, previous_value, current_time, previous_time):
-        """
-        Calculate the derivative of a signal using current and previous sensor readings along with their timestamps.
-        
-        Parameters:
-        current_value (float): Current sensor reading.
-        previous_value (float): Previous sensor reading.
-        current_time (float): Current timestamp when the reading was taken.
-        previous_time (float): Previous timestamp when the last reading was taken.
-        
-        Returns:
-        float: The derivative of the signal, or None if time difference is zero or input is invalid.
-        """
-        if previous_value is None or previous_time is None:
-            # No previous data to compare with, so derivative cannot be computed
-            return None
-        
-        delta_value = current_value - previous_value
-        delta_time = current_time - previous_time
-        
-        if delta_time > 0:
-            return delta_value / delta_time
-        else:
-            # Avoid division by zero; return None and handle this case appropriately in the calling code
-            return None
-
-
-    def estimate_angle(self, accel_y, min_accel=-6, max_accel=8, min_angle=0, max_angle=150):
-        """
-        Estimate the angle based on accelerometer y-channel data using linear interpolation.
-
-        Parameters:
-        accel_y (float): Current accelerometer y-channel reading.
-        min_accel (float): Minimum accelerometer y value corresponding to the minimum angle. Default -6
-        max_accel (float): Maximum accelerometer y value corresponding to the maximum angle. Default +8
-        min_angle (float): Minimum angle, typically representing full extension.             Default  0   degrees
-        max_angle (float): Maximum angle, typically representing full flexion.               Default  150 degrees
-
-        Returns:
-        float: Estimated angle in degrees.
-        """
-        # Calculate the proportion of the way accel_y is between min_accel and max_accel
-        proportion = (accel_y - min_accel) / (max_accel - min_accel)
-
-        # Interpolate this proportion linearly between min_angle and max_angle
-        angle = min_angle + proportion * (max_angle - min_angle)
-        return angle
-
-
-    def detect_activation(envelope, threshold):
-        """
-        Detect if the EMG envelope indicates muscle activation above a specified threshold.
-        
-        Parameters:
-        envelope (float): Current envelope value.
-        threshold (float): Activation threshold. Threshold is 1/3 of MVC for each muscle
-        
-        Returns:
-        bool: True if the envelope exceeds the threshold, False otherwise.
-        """
-        return envelope > threshold
-
+        # Copy initial conditions to channel 2
+        self.zf_bp_ch2 = self.zf_bp_ch1.copy()
+        self.zf_bs_ch2 = self.zf_bs_ch1.copy()
+        self.zf_lp_ch2 = self.zf_lp_ch1.copy()
 
     def sendDataLoop(self):
         try:
@@ -177,11 +144,16 @@ class ShimmerDataNode(Node):
             emg_filtered_msg = Vector3()
             emg_rectified_msg = Vector3()
             emg_envelope_msg = Vector3()
-            emg_contraction_ch1_msg = Bool()
-            emg_contraction_ch2_msg = Bool()
+            emg_contraction_msg = Vector3()
             ln_accMsg = Vector3()
             acc_derivative_msg = Float32()
             angle_estimate_msg = Float32()
+            features_msg = Float32MultiArray()
+
+            accelerometer = AccelerometerMethods(n=5)
+            emg_ch1 = EMGMethods(window_size=50, Fs=self.Fs)
+            emg_ch2 = EMGMethods(window_size=50, Fs=self.Fs)
+
             while True:
                 n_of_packets, packets = self.shimmer3.read_data_packet_extended(calibrated=True)
                 if n_of_packets > 0:
@@ -200,51 +172,67 @@ class ShimmerDataNode(Node):
                     ###             EMG             ###
                     ###################################
 
-                    ch1_envelope, ch1_rectified, ch1_filtered = self.emg_envelope(calibrated_ch1)
-                    ch2_envelope, ch2_rectified, ch2_filtered = self.emg_envelope(calibrated_ch2)
-
-                    # Check if contraction is above a threshold. Returns True or False
-                    ch1_contraction = self.detect_activation(ch1_envelope, (self.ch1_MVC/3)) # Threshold is 1/3 of maximum contraction
-                    ch2_contraction = self.detect_activation(ch2_envelope, (self.ch2_MVC/3))
-
                     # Assign unfiltered values
                     emg_raw_msg.x = float(calibrated_ch1)
                     emg_raw_msg.y = float(calibrated_ch2)
-                    
-                    # Assign filtered values
-                    emg_filtered_msg.x = ch1_filtered[0]  # lfilter returns a list, take the first element
-                    emg_filtered_msg.y = ch2_filtered[0]  # Same here
 
+                    # Step 1: Bandpass filter
+                    bp_ch1, self.zf_bp_ch1 = lfilter(self.b_bp, self.a_bp, [calibrated_ch1], zi=self.zf_bp_ch1)
+                    bp_ch2, self.zf_bp_ch2 = lfilter(self.b_bp, self.a_bp, [calibrated_ch2], zi=self.zf_bp_ch2)
+
+                    # Step 2: Bandstop filter
+                    bs_ch1, self.zf_bs_ch1 = lfilter(self.b_bs, self.a_bs, bp_ch1, zi=self.zf_bs_ch1)
+                    bs_ch2, self.zf_bs_ch2 = lfilter(self.b_bs, self.a_bs, bp_ch2, zi=self.zf_bs_ch2)
+
+                    # Step 3: Lowpass filter
+                    lp_ch1, self.zf_lp_ch1 = lfilter(self.b_lp, self.a_lp, bs_ch1, zi=self.zf_lp_ch1)
+                    lp_ch2, self.zf_lp_ch2 = lfilter(self.b_lp, self.a_lp, bs_ch2, zi=self.zf_lp_ch2)
+
+                    # Assign filtered values
+                    emg_filtered_msg.x = lp_ch1[0]  # lfilter returns a list, take the first element
+                    emg_filtered_msg.y = lp_ch2[0]  # Same here
+
+                    ch1_rectified, ch1_envelope = emg_ch1.emg_envelope(lp_ch1[0])
+                    ch2_rectified, ch2_envelope = emg_ch2.emg_envelope(lp_ch2[0])
+                    combined_envelope = ch1_envelope + ch2_envelope
+
+                    # Check if contraction is above a threshold. Returns True or False
+                    ch1_contraction = emg_ch1.detect_activation(ch1_envelope, self.ch1_threshold)
+                    ch2_contraction = emg_ch2.detect_activation(ch2_envelope, self.ch2_threshold)
+                    combined_contraction = emg_ch1.detect_activation(combined_envelope, self.ch1_threshold)
+                    
                     # Assign rectified values
-                    emg_rectified_msg.x = ch1_rectified[0]
-                    emg_rectified_msg.y = ch2_rectified[0]
+                    emg_rectified_msg.x = ch1_rectified
+                    emg_rectified_msg.y = ch2_rectified
 
                     # Assign envelope
-                    emg_envelope_msg.x = ch1_envelope[0]
-                    emg_envelope_msg.y = ch2_envelope[0]
+                    emg_envelope_msg.x = ch1_envelope/self.ch1_MVC
+                    emg_envelope_msg.y = ch2_envelope
+                    emg_envelope_msg.z = combined_envelope
 
                     # Assign contractions (feature)
-                    emg_contraction_ch1_msg.data = ch1_contraction
-                    emg_contraction_ch2_msg.data = ch2_contraction
+                    emg_contraction_msg.x = float(ch1_contraction)
+                    emg_contraction_msg.y = float(ch2_contraction)
+                    emg_contraction_msg.z = float(combined_contraction)
 
                     ###################################
                     ###        Accelerometer        ###
                     ###################################
 
+                    acc_y_smooth = accelerometer.smooth_accelerometer(calibrated_ln_accy)
+
                     # Derivative of Accel y (feature)
-                    acc_y_derivative = self.calculate_derivative(calibrated_ln_accy, previous_ln_accy, ts_current, previous_ts_current)
-                    previous_ln_accy = calibrated_ln_accy
-                    previous_ts_current = ts_current
+                    acc_y_derivative = accelerometer.smooth_derivative(acc_y_smooth, ts_current)
 
                     # Estimated angle based on accelerometer data (feature)
-                    elbow_angle = self.estimate_angle(calibrated_ln_accy, min_accel=self.accel_y_min, max_accel=self.accel_y_max)
+                    elbow_angle = accelerometer.estimate_angle(acc_y_smooth, min_accel=self.accel_y_min, max_accel=self.accel_y_max)
 
                     # Assign accel values
                     ln_accMsg.x = float(calibrated_ln_accx)
-                    ln_accMsg.y = float(calibrated_ln_accy)
+                    ln_accMsg.y = float(acc_y_smooth)
                     ln_accMsg.z = float(calibrated_ln_accz)
 
-                    acc_derivative_msg.data = float(acc_y_derivative)
+                    acc_derivative_msg.data = acc_y_derivative
                     angle_estimate_msg.data = float(elbow_angle)
 
                     ###################################
@@ -257,18 +245,10 @@ class ShimmerDataNode(Node):
 
 
                     ###################################
-                    ###          Countdown          ###
+                    ###           Features          ###
                     ###################################
 
-                    if ts_current - ts_start < 5:
-                        print(self.countdown)
-                        if self.countdown > 0:
-                            self.countdown -= 1
-                        else:
-                            self.countdown = None
-
-                        if self.countdown == 0:
-                            print("   ---   Record!   ---   ")
+                    features_msg.data = [float(combined_contraction)] + [float(acc_y_derivative)] + [float(elbow_angle)]
 
                     
                     ###################################
@@ -280,15 +260,178 @@ class ShimmerDataNode(Node):
                     self.pubEmgFiltered.publish(emg_filtered_msg)
                     self.pubEmgRectified.publish(emg_rectified_msg)
                     self.pubEmgEnvelope.publish(emg_envelope_msg)
-                    self.pubCh1Contraction.publish(emg_contraction_ch1_msg)
-                    self.pubCh2Contraction.publish(emg_contraction_ch2_msg)
                     self.pubLnAcc.publish(ln_accMsg)
+                    self.pubContraction.publish(emg_contraction_msg)
                     self.pubAccDerivative.publish(acc_derivative_msg)
                     self.pubAngle.publish(angle_estimate_msg)
+
+                    self.pubFeatures.publish(features_msg)
 
         except KeyboardInterrupt:
             self.shimmer3.stop_bt_streaming()
             self.shimmer3.disconnect(reset_obj_to_init=True)
+
+
+class EMGMethods:
+    def __init__(self, window_size=25, Fs=500):
+        """
+        Initialize circular buffer for smoothing
+        
+        Parameters:
+        window_size (int): Number of points for smoothing. Default is 50.
+        """
+
+        self.envelope_buffer = deque(maxlen=window_size)
+        self.Fs = Fs # Sampling frequency
+        self.low_pass_cutoff = 10
+
+        self.b, self.a = butter(4, self.low_pass_cutoff / (self.Fs / 2), btype='low')
+
+
+
+    def emg_envelope(self, data):
+        # Full-wave rectification
+        rectified_emg = np.abs(data)
+
+        # Low-pass filter at 4 Hz
+        envelope_emg = lfilter(self.b, self.a, [rectified_emg])
+
+        self.envelope_buffer.append(envelope_emg[0])  # Append filtered data to the buffer
+        return rectified_emg, self.get_smoothed_envelope()  # Compute and return the smoothed envelope
+
+
+    def get_smoothed_envelope(self):
+        """Calculate and return the moving average of the buffer contents."""
+        if self.envelope_buffer:
+            return sum(self.envelope_buffer) / len(self.envelope_buffer)  # Calculate moving average
+        return 0  # If buffer is somehow empty, return 0
+    
+
+    def detect_activation(self, envelope, threshold):
+        """
+        Detect if the EMG envelope indicates muscle activation above a specified threshold.
+        
+        Parameters:
+        envelope (float): Current envelope value.
+        threshold (float): Activation threshold. Threshold is xxx of MVC for each muscle TODO: Find decent value for threshold
+        
+        Returns:
+        float32: 1 if the envelope exceeds the threshold, 0 otherwise.
+        """
+        if envelope >= threshold:
+            contraction = 1
+        elif envelope < threshold:
+            contraction = 0
+
+        return contraction
+    
+
+class AccelerometerMethods:
+    def __init__(self, n=50):
+        """
+        Initialize the class with a circular buffer for smoothing.
+        
+        Parameters:
+        n (int): Number of points for smoothing. Default is 4.
+        """
+        self.previous_value = None
+        self.previous_time = None
+        self.derivatives = deque(maxlen=n)
+        self.accelerometer_buffer = deque(maxlen=50)
+
+    def smooth_accelerometer(self, data):
+        """
+        Smooth the raw accelerometer data
+        
+        Parameters:
+        data (float): Current sensor reading
+        
+        Returns:
+        float: The mean value over the 50 samples"""
+
+        self.accelerometer_buffer.append(data)
+        if self.accelerometer_buffer:
+            return sum(self.accelerometer_buffer) / len(self.accelerometer_buffer)
+        return 0 # In case there is no buffer, return 0
+
+    def calculate_derivative(self, current_value, previous_value, current_time, previous_time):
+        """
+        Calculate the derivative of a signal.
+        
+        Parameters:
+        current_value (float): Current sensor reading.
+        previous_value (float): Previous sensor reading.
+        current_time (float): Current timestamp.
+        previous_time (float): Previous timestamp.
+        
+        Returns:
+        float: The derivative of the signal, or None if time difference is zero or input is invalid.
+        """
+        if previous_value is None or previous_time is None:
+            # No previous data to compare with
+            return float(0)
+
+        delta_value = current_value - previous_value
+        delta_time = current_time - previous_time
+
+        if delta_time > 0:
+            return float(delta_value / delta_time)
+        else:
+            # Avoid division by zero
+            return None
+
+    def smooth_derivative(self, current_value, current_time):
+        """
+        Compute the smoothed derivative using moving average.
+        
+        Parameters:
+        current_value (float): Current sensor reading.
+        current_time (float): Current timestamp.
+        
+        Returns:
+        float: Smoothed derivative of the signal.
+        """
+        # Calculate the raw derivative
+        derivative = self.calculate_derivative(current_value, self.previous_value, current_time, self.previous_time)
+
+        # Update the previous values
+        self.previous_value = current_value
+        self.previous_time = current_time
+
+        # Add the current derivative to the circular buffer if valid
+        if derivative is not None:
+            self.derivatives.append(derivative)
+
+        # Calculate and return the moving average of the derivatives
+        return sum(self.derivatives) / len(self.derivatives) if self.derivatives else float(0)
+    
+    def estimate_angle(self, accel_y, min_accel, max_accel, min_angle=0, max_angle=150):
+        """
+        Estimate the angle based on accelerometer y-channel data using linear interpolation.
+
+        Parameters:
+        accel_y (float): Current accelerometer y-channel reading.
+        min_accel (float): Minimum accelerometer y value corresponding to the minimum angle.
+        max_accel (float): Maximum accelerometer y value corresponding to the maximum angle.
+        min_angle (float): Minimum angle, typically representing full extension.             Default  0   degrees
+        max_angle (float): Maximum angle, typically representing full flexion.               Default  150 degrees
+
+        Returns:
+        float: Estimated angle in degrees.
+        """
+        #calculate slope, and intercept point
+        a = (min_angle - max_angle)/(max_accel - min_accel)
+
+        b = max_angle - a * min_accel
+
+        angle = a * accel_y + b
+
+        # Calculate the proportion of the way accel_y is between min_accel and max_accel
+        #proportion = (accel_y - min_accel) / (max_accel - min_accel)
+
+        # Interpolate this proportion linearly between min_angle and max_angle
+        #angle = min_angle + proportion * (max_angle - min_angle)
+        return angle
 
 
 def main(args=None):

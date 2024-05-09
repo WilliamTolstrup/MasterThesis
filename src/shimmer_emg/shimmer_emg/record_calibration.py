@@ -1,114 +1,96 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool, Float32
 from geometry_msgs.msg import Vector3
 import csv
 import os
 import time
 
-
-class DataListener(Node):
+class MVCDataListener(Node):
     def __init__(self):
-        super().__init__('data_listener')
-        self.filename = 'calibration.csv'
-        self.file_exists = os.path.isfile(self.filename)
+        super().__init__('mvc_data_listener')
+        self.data_filename = 'calibration.csv'
+        self.data_file = open(self.data_filename, mode='w', newline='')  # Overwrite old data
+        self.data_writer = csv.writer(self.data_file)
+        self.data_writer.writerow(['max_mvc_ch1', 'max_mvc_ch2', 'minvc_ch1', 'minvc_ch2', 'max_acc_y', 'min_acc_y'])
 
-        # Open the file in append mode and create a csv writer object
-        self.file = open(self.filename, mode='a', newline='')  # 'a' appends new data onto the existing file. 'w' wipes the file before writing.
-        self.writer = csv.writer(self.file)
-
-        # Header for .csv file
-        if not self.file_exists:
-            self.writer.writerow(['accel_y', 'ch1_envelope', 'ch2_envelope'])
-
-
-
-        # Don't record data for the first 5 seconds to avoid noise
-        self.initial_delay_duration = 5  # seconds
-        self.delay_end_time = time.time() + self.initial_delay_duration  # Current time + delay
-
-        # Initialize lists and flags
-        self.emg_envelope_data  = [0, 0]
-        self.acc_y_data  = [0]
-        # Flags
-        self.new_emg_envelope_data = False
-        self.new_acc_y_data = False
-
-
-        # EMG envelope data subscriber
-        self.emg_raw_subscriber = self.create_subscription(Vector3, '/emg/emg_envelope', self.emg_envelope_data_callback, 10)
-        # IMU accelerometer data subscriber
-        self.acc_subscriber = self.create_subscription(Vector3, '/imu/ln_acc', self.acc_callback, 10)
-
-
-        # Timing and protocol management
-        self.start_time = time.time()
-        self.current_state = 'rest'
-        self.state_start_time = self.start_time
-        self.protocol = [
-            ('rest', 4),
-            ('MVC bicep', 4),
-            ('MVC tricep', 4),
+        # Measurement protocol includes motion states
+        self.mvc_measurements = [
+            ('prepare', 5),
+            ('mvc', 5),
+            ('rest', 5),
+            ('full range of motion', 10),
+            ('rest', 5),
+            ('mvc', 5),
+            ('rest', 5),
+            ('mvc', 5),
+            ('finished', 5)
         ]
         self.protocol_index = 0
-        self.state_transitions = []
+        self.state_start_time = time.time()
 
-        # Log the initial state
-        print(f"Starting protocol with {self.protocol[self.protocol_index][0]} for {self.protocol[self.protocol_index][1]} seconds.")
+        # Data storage for processing later
+        self.emg_envelope_data = [0, 0]
+        self.acc_y_data = 0
+        self.current_state = 'prepare'
+        self.mvc_values = [[], []]
+        self.minvc_values = [[], []]
+        self.extreme_acc_y = []
 
+        print(f"Startting with state: {self.current_state}")
 
-    def emg_envelope_data_callback(self, msg):
-        self.emg_envelope_data = [msg.x, msg.y]
-        self.new_emg_envelope_data = True
-        self.log_and_save_data()
+        # Subscriptions
+        self.emg_envelope_subscriber = self.create_subscription(Vector3, '/emg/emg_envelope', self.emg_envelope_callback, 10)
+        self.acc_subscriber = self.create_subscription(Vector3, '/imu/ln_acc', self.ln_acc_callback, 10)
 
+    def emg_envelope_callback(self, msg):
+        if self.current_state == 'mvc':
+            self.mvc_values[0].append(msg.x)
+            self.mvc_values[1].append(msg.y)
+        
+        elif self.current_state == 'rest':
+            self.minvc_values[0].append(msg.x)
+            self.minvc_values[1].append(msg.y)
 
-    def acc_callback(self, msg):
-        self.acc_data = msg.y
-        self.new_acc_data = True
-        self.log_and_save_data()
+    def ln_acc_callback(self, msg):
+        if self.current_state == 'full range of motion':
+            self.extreme_acc_y.append(msg.y)
 
     def update_protocol_state(self):
         current_time = time.time()
         elapsed_time = current_time - self.state_start_time
-        _, duration = self.protocol[self.protocol_index]  # Get current state duration
-
+        state, duration = self.mvc_measurements[self.protocol_index]
+        
         if elapsed_time >= duration:
-            # Move to the next state in the protocol
-            self.protocol_index = (self.protocol_index + 1) % len(self.protocol)
-            self.current_state, _ = self.protocol[self.protocol_index]  # Update to new state
-            self.state_start_time = current_time  # Reset state start time
+            self.protocol_index = (self.protocol_index + 1) % len(self.mvc_measurements)
+            self.current_state, _ = self.mvc_measurements[self.protocol_index]
+            self.state_start_time = current_time
             print(f"Switching to {self.current_state}.")
 
-    def log_and_save_data(self):
-        if time.time() < self.delay_end_time:
-            return  # Skip logging and saving data during the delay period
-        
-        # Check if all data types have been updated
-        if self.emg_envelope_data and self.new_acc_data:
-            # Save data to csv
-            self.writer.writerow(self.new_acc_data + self.emg_envelope_data)
+            if self.current_state == 'finished':
+                # Calculate and log the highest MVC values and extreme AccY values
+                max_mvc_ch1 = max(self.mvc_values[0]) if self.mvc_values[0] else 0
+                max_mvc_ch2 = max(self.mvc_values[1]) if self.mvc_values[1] else 0
+                minvc_ch1 = min(self.minvc_values[0] if self.minvc_values[0] else 0)
+                mincv_ch2 = min(self.minvc_values[1] if self.minvc_values[1] else 0)
 
-            self.emg_envelope_data = False
-            self.new_acc_data = False
+                max_acc_y = max(self.extreme_acc_y) if self.extreme_acc_y else 0
+                min_acc_y = min(self.extreme_acc_y) if self.extreme_acc_y else 0
 
-        else:
-            return
-        
-    def __del__(self):
-        # Close the file
-        self.file.close()
+                # Save summary data to csv
+                self.data_writer.writerow([max_mvc_ch1, max_mvc_ch2, minvc_ch1, mincv_ch2, max_acc_y, min_acc_y])
+                self.data_file.close()
+                rclpy.shutdown()
 
+    def run(self):
+        while rclpy.ok():
+            rclpy.spin_once(self)
+            self.update_protocol_state()
 
 def main(args=None):
     rclpy.init(args=args)
-
-    data_listener = DataListener()
-
-    rclpy.spin(data_listener)
-
-    data_listener.destroy_node()
-    rclpy.shutdown()
+    mvc_data_listener = MVCDataListener()
+    mvc_data_listener.run()
 
 if __name__ == '__main__':
     main()
