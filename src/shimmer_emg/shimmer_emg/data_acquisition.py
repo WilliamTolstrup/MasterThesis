@@ -38,7 +38,7 @@ class ShimmerDataNode(Node):
 
 
         # Individual calibration
-        self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
+        self.data_filepath = '/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/calibration.csv'
         self.data_file_exists = os.path.isfile(self.data_filepath)
 
         if self.data_file_exists:
@@ -206,7 +206,7 @@ class ShimmerDataNode(Node):
                     emg_rectified_msg.y = ch2_rectified
 
                     # Assign envelope
-                    emg_envelope_msg.x = ch1_envelope/self.ch1_MVC
+                    emg_envelope_msg.x = ch1_envelope
                     emg_envelope_msg.y = ch2_envelope
                     emg_envelope_msg.z = combined_envelope
 
