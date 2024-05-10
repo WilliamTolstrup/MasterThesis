@@ -112,7 +112,7 @@ class MotorControlNode(Node):
 
         if self.struggle_detected:
             # Increase support if struggling
-            self.target_speed = 5
+            self.target_speed = 50
             print("STRUGGLE DETECTED!!")
         else:
             # Normal adaptive speed calculation
@@ -122,10 +122,10 @@ class MotorControlNode(Node):
             print(f"Envelope effect: {envelope_effect}")
             self.target_speed = derivative_effect + envelope_effect
             print(f"Target speed pre-norm: {self.target_speed}")
-            self.target_speed = np.clip(self.target_speed, 0, 100)
+            self.target_speed = np.clip(self.target_speed, 0, 10)
             print(f"Target speed post-norm: {self.target_speed}")
 
-        self.update_motor()
+        self.ramp_speed(self.target_speed)
 
     def angle_callback(self, msg):
         angle = msg.data
@@ -155,24 +155,39 @@ class MotorControlNode(Node):
             new_direction = 'stop'
 
         if new_direction != self.current_direction:
-            self.previous_direction = self.current_direction
             self.current_direction = new_direction
-            self.update_motor()
+            self.evaluate_control_strategy()
+
+        self.update_motor()
 
     def measure_current_speed(self):
         # Placeholder - convert encoder counts to actual speed
         return self.encoder_position / time.monotonic()  # Simplified example
 
-    def update_motor(self):
+    def ramp_speed(self, target_speed):
+        ramp_rate = 1  # Speed change per step, adjust based on testing
+        ramp_time = 0.05  # Time between ramp steps in seconds, adjust based on testing
+
+        if self.current_speed < target_speed:
+            while self.current_speed < target_speed:
+                self.current_speed += ramp_rate
+                self.current_speed = min(self.current_speed, target_speed)  # Ensure we do not exceed target
+                self.update_motor(self.current_speed)
+                time.sleep(ramp_time)
+        elif self.current_speed > target_speed:
+            while self.current_speed > target_speed:
+                self.current_speed -= ramp_rate
+                self.current_speed = max(self.current_speed, target_speed)  # Ensure we do not go below target
+                self.update_motor(self.current_speed)
+                time.sleep(ramp_time)
+
+    def update_motor(self, adjusted_speed):
    #     measured_speed = self.measure_current_speed()
    #     pid_output = self.pid.update(self.target_speed, measured_speed)
    #     adjusted_speed = max(0, min(100, abs(pid_output)))
 
-        if self.current_direction != self.previous_direction:
-            self.stop_motor()
-            time.sleep(0.1)
 
-        adjusted_speed = self.target_speed
+        #adjusted_speed = self.target_speed
         print(f"Adjusted speed: {adjusted_speed}")
 
         # Set motor PWM based on current direction and dynamically adjusted speed
