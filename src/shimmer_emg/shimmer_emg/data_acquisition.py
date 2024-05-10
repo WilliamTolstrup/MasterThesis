@@ -39,7 +39,8 @@ class ShimmerDataNode(Node):
 
         # Individual calibration
         self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
-        self.data_file_exists = os.path.isfile(self.data_filepath)
+        self.rp_filepath = '/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/calibration.csv' # used on the raspberry pi
+        self.data_file_exists = os.path.isfile(self.data_filepath) or os.path.isfile(self.rp_filepath)
 
         # Flags so it works without calibration (to calibrate)
         self.ch1_MinVC   = False
