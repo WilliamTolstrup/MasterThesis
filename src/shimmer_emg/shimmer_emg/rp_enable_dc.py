@@ -166,13 +166,13 @@ class MotorControlNode(Node):
 
         self.update_motor
 
-    def update_motor(self, adjusted_speed):
+    def update_motor(self):
    #     measured_speed = self.measure_current_speed()
    #     pid_output = self.pid.update(self.target_speed, measured_speed)
    #     adjusted_speed = max(0, min(100, abs(pid_output)))
 
 
-        #adjusted_speed = self.target_speed
+        adjusted_speed = self.target_speed
         print(f"Adjusted speed: {adjusted_speed}")
 
         # Set motor PWM based on current direction and dynamically adjusted speed
