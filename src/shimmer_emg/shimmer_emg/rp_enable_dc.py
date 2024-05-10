@@ -105,7 +105,7 @@ class MotorControlNode(Node):
 
     def evaluate_control_strategy(self):
         # Adjust motor speed based on the context
-        if self.last_emg_envelope > 5e-06 and abs(self.last_derivative) < 1:
+        if self.last_emg_envelope > 0.5 and abs(self.last_derivative) < 1:
             self.struggle_detected = True
         else:
             self.struggle_detected = False
@@ -130,9 +130,9 @@ class MotorControlNode(Node):
     def angle_callback(self, msg):
         angle = msg.data
         if angle < self.min_angle or angle > self.max_angle:
-            self.stop_motor_due_to_safety()
+            self.stop_motor()
 
-    def stop_motor_due_to_safety(self):
+    def stop_motor(self):
         # Stops the motor if the elbow angle is out of the safe range
         self.pwm_forward.ChangeDutyCycle(0)
         self.pwm_backward.ChangeDutyCycle(0)
@@ -148,12 +148,16 @@ class MotorControlNode(Node):
         
    # Update motor direction based on SVM state prediction
         if predicted_state == 'flexion_heavy_vertical':
-            self.current_direction = 'forward'
+            new_direction = 'forward'
         elif predicted_state == 'extension_heavy_vertical':
-            self.current_direction = 'backward'
+            new_direction = 'backward'
         else:
-            self.current_direction = 'stop'
-        self.update_motor()
+            new_direction = 'stop'
+
+        if new_direction != self.current_direction:
+            self.previous_direction = self.current_direction
+            self.current_direction = new_direction
+            self.update_motor()
 
     def measure_current_speed(self):
         # Placeholder - convert encoder counts to actual speed
@@ -163,6 +167,10 @@ class MotorControlNode(Node):
    #     measured_speed = self.measure_current_speed()
    #     pid_output = self.pid.update(self.target_speed, measured_speed)
    #     adjusted_speed = max(0, min(100, abs(pid_output)))
+
+        if self.current_direction != self.previous_direction:
+            self.stop_motor()
+            time.sleep(0.1)
 
         adjusted_speed = self.target_speed
         print(f"Adjusted speed: {adjusted_speed}")
