@@ -41,11 +41,11 @@ class DataListener(Node):
             self.features_writer.writerow(['combined_contraction', 'acc_y_derivative', 'elbow_angle', 'state'])
 
 
-
+        self.delay = 1.0
         self.iteration = 1
 
         # Don't record data for the first 5 seconds to avoid noise
-        self.initial_delay_duration = 4  # seconds
+        self.initial_delay_duration = 4 + self.delay  # seconds
         self.delay_end_time = time.time() + self.initial_delay_duration  # Current time + delay
 
         # Initialize lists and flags
@@ -169,7 +169,7 @@ class DataListener(Node):
 
     def update_protocol_state(self):
         current_time = time.time()
-        elapsed_time = current_time - self.state_start_time
+        elapsed_time = current_time - self.state_start_time - self.delay
         _, duration = self.protocol[self.protocol_index]  # Get current state duration
 
         if elapsed_time >= duration:

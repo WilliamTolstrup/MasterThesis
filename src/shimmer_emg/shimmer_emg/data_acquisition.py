@@ -41,6 +41,14 @@ class ShimmerDataNode(Node):
         self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
         self.data_file_exists = os.path.isfile(self.data_filepath)
 
+        # Flags so it works without calibration (to calibrate)
+        self.ch1_MinVC   = False
+        self.ch1_MVC     = False
+        self.ch2_MinVC   = False
+        self.ch2_MVC     = False
+        self.accel_y_max = False
+        self.accel_y_min = False
+
         if self.data_file_exists:
             individual_calibration = pd.read_csv(self.data_filepath)
             self.accel_y_max = individual_calibration['max_acc_y'].values
@@ -61,14 +69,7 @@ class ShimmerDataNode(Node):
             print("==================================")
             print()
         else:
-            print("No individual calibration available, using default values")
-
-            self.accel_y_max = 10.233483447510377
-            self.accel_y_min = -8.946667585220526
-            self.ch1_MVC = 4.562029076400025e-06
-            self.ch2_MVC = 2.8779783481736706e-06
-            self.ch1_MinVC = 3.5377742130598964e-07
-            self.ch2_MinVC = 7.65491880537546e-08
+            print("No individual calibration available")
 
         self.ch1_threshold = self.setup_envelope_threshold(self.ch1_MinVC, self.ch1_MVC, 0.12) # k = 0.12 -> 12% above minvc towards mvc
         self.ch2_threshold = self.setup_envelope_threshold(self.ch2_MinVC, self.ch2_MVC, 0.08) # Same here
@@ -86,7 +87,10 @@ class ShimmerDataNode(Node):
         self.timer = self.create_timer(0.01, self.sendDataLoop)
 
     def setup_envelope_threshold(self, minvc, mvc, k):
-        return minvc + k * (mvc - minvc)
+        if minvc and mvc:
+            return minvc + k * (mvc - minvc)
+        else:
+            return 0
 
 
     def setup_shimmer(self):
@@ -206,9 +210,17 @@ class ShimmerDataNode(Node):
                     emg_rectified_msg.y = ch2_rectified
 
                     # Assign envelope
-                    emg_envelope_msg.x = ch1_envelope/self.ch1_MVC
-                    emg_envelope_msg.y = ch2_envelope
-                    emg_envelope_msg.z = combined_envelope
+                    if self.ch1_MVC:
+                        emg_envelope_msg.x = float((ch1_envelope-self.ch1_MinVC)/(self.ch1_MVC-self.ch1_MinVC))
+                        emg_envelope_msg.y = float((ch2_envelope-self.ch2_MinVC)/(self.ch2_MVC-self.ch2_MinVC))
+                        emg_envelope_msg.z = np.clip(emg_envelope_msg.x + emg_envelope_msg.y, 0, 1)
+
+                        print(f"Non-normalized envelope ch1: {ch1_envelope}")
+                        print(f"Combined envelope: {emg_envelope_msg.z}")
+                    else:
+                        emg_envelope_msg.x = ch1_envelope
+                        emg_envelope_msg.y = ch2_envelope
+                        emg_envelope_msg.z = combined_envelope
 
                     # Assign contractions (feature)
                     emg_contraction_msg.x = float(ch1_contraction)
@@ -283,7 +295,7 @@ class EMGMethods:
 
         self.envelope_buffer = deque(maxlen=window_size)
         self.Fs = Fs # Sampling frequency
-        self.low_pass_cutoff = 10
+        self.low_pass_cutoff = 4 # 4 Hz
 
         self.b, self.a = butter(4, self.low_pass_cutoff / (self.Fs / 2), btype='low')
 
@@ -419,19 +431,22 @@ class AccelerometerMethods:
         Returns:
         float: Estimated angle in degrees.
         """
-        #calculate slope, and intercept point
-        a = (min_angle - max_angle)/(max_accel - min_accel)
+        if max_accel:
+            #calculate slope, and intercept point
+            a = (min_angle - max_angle)/(max_accel - min_accel)
 
-        b = max_angle - a * min_accel
+            b = max_angle - a * min_accel
 
-        angle = a * accel_y + b
+            angle = a * accel_y + b
 
-        # Calculate the proportion of the way accel_y is between min_accel and max_accel
-        #proportion = (accel_y - min_accel) / (max_accel - min_accel)
+            # Calculate the proportion of the way accel_y is between min_accel and max_accel
+            #proportion = (accel_y - min_accel) / (max_accel - min_accel)
 
-        # Interpolate this proportion linearly between min_angle and max_angle
-        #angle = min_angle + proportion * (max_angle - min_angle)
-        return angle
+            # Interpolate this proportion linearly between min_angle and max_angle
+            #angle = min_angle + proportion * (max_angle - min_angle)
+            return angle
+        else:
+            return 0
 
 
 def main(args=None):

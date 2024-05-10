@@ -52,6 +52,11 @@ When you see your device on the list (You may have to identify it with the MAC a
 
 It may disconnect within a few seconds, but that's alright, just leave the scan on.
 
+Trouble shooting:
+If you get "No default controller available" in the bluetoothctl menu, exit it 'exit', and do the following:
+'systemctl start hciuart'
+'sudo bluetoothctl'
+
 ### Acquisition of EMG and IMU data
 If running on the laptop, remember to disable the ModemManager, as it interferes with the serial port.
     'sudo systemctl stop ModemManager'
