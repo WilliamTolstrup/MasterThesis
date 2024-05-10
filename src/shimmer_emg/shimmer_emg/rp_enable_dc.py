@@ -112,10 +112,11 @@ class MotorControlNode(Node):
 
         if self.struggle_detected:
             # Increase support if struggling
-            self.target_speed = 50
+            self.target_speed = 5
+            print("STRUGGLE DETECTED!!")
         else:
             # Normal adaptive speed calculation
-            derivative_effect = abs(self.last_derivative) * 10
+            derivative_effect = abs(self.last_derivative)
             print(f"Derivative effect: {derivative_effect}")
             envelope_effect = self.last_emg_envelope
             print(f"Envelope effect: {envelope_effect}")
