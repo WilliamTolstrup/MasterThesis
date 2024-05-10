@@ -84,6 +84,46 @@ class MotorControlNode(Node):
         self.last_clk_state = GPIO.input(CLK)
         GPIO.add_event_detect(CLK, GPIO.BOTH, callback=self.read_encoder)
 
+    ##########################
+    ###     CALLBACKS      ###
+    ##########################
+
+    def emg_envelope_callback(self, msg):
+        average_envelope = (msg.x + msg.y) / 2
+        self.last_emg_envelope = average_envelope
+        self.evaluate_control_strategy()
+
+    def acc_derivative_callback(self, msg):
+        self.last_derivative = msg.data
+        self.evaluate_control_strategy()
+
+    def angle_callback(self, msg):
+        angle = msg.data
+        if angle < self.min_angle or angle > self.max_angle:
+            self.stop_motor()
+
+    def feature_callback(self, feature_msg):
+        feature_names = ['combined_contraction', 'acc_y_derivative', 'elbow_angle']
+        features_df = pd.DataFrame([feature_msg.data], columns=feature_names)
+
+        scaled_features = scaler.transform(features_df)
+        predicted_state = svm_model.predict(scaled_features)[0].strip().strip("'\"")
+        print(f"predicted state: {predicted_state}")
+        
+   # Update motor direction based on SVM state prediction
+        if predicted_state == 'flexion_heavy_vertical':
+            self.current_direction = 'forward'
+        elif predicted_state == 'extension_heavy_vertical':
+            self.current_direction = 'backward'
+        else:
+            self.current_direction = 'stop'
+
+        self.update_motor()
+
+    ##########################
+    ###       ENCODER      ###
+    ##########################
+
     def read_encoder(self, channel):
         clk_state = GPIO.input(CLK)
         dt_state = GPIO.input(DT)
@@ -94,14 +134,13 @@ class MotorControlNode(Node):
                 self.encoder_position -= 1
         self.last_clk_state = clk_state
 
-    def emg_envelope_callback(self, msg):
-        average_envelope = (msg.x + msg.y) / 2
-        self.last_emg_envelope = average_envelope
-        self.evaluate_control_strategy()
+    def measure_current_speed(self):
+        # Placeholder - convert encoder counts to actual speed
+        return self.encoder_position / time.monotonic()  # Simplified example
 
-    def acc_derivative_callback(self, msg):
-        self.last_derivative = msg.data
-        self.evaluate_control_strategy()
+    ##########################
+    ###       CONTROL      ###
+    ##########################
 
     def evaluate_control_strategy(self):
         # Adjust motor speed based on the context
@@ -125,61 +164,7 @@ class MotorControlNode(Node):
             self.target_speed = np.clip(self.target_speed, 0, 10)
             print(f"Target speed post-norm: {self.target_speed}")
 
-        self.ramp_speed(self.target_speed)
-
-    def angle_callback(self, msg):
-        angle = msg.data
-        if angle < self.min_angle or angle > self.max_angle:
-            self.stop_motor()
-
-    def stop_motor(self):
-        # Stops the motor if the elbow angle is out of the safe range
-        self.pwm_forward.ChangeDutyCycle(0)
-        self.pwm_backward.ChangeDutyCycle(0)
-        print("Motor stopped because elbow angle exceeded limit")
-
-    def feature_callback(self, feature_msg):
-        feature_names = ['combined_contraction', 'acc_y_derivative', 'elbow_angle']
-        features_df = pd.DataFrame([feature_msg.data], columns=feature_names)
-
-        scaled_features = scaler.transform(features_df)
-        predicted_state = svm_model.predict(scaled_features)[0].strip().strip("'\"")
-        print(f"predicted state: {predicted_state}")
-        
-   # Update motor direction based on SVM state prediction
-        if predicted_state == 'flexion_heavy_vertical':
-            new_direction = 'forward'
-        elif predicted_state == 'extension_heavy_vertical':
-            new_direction = 'backward'
-        else:
-            new_direction = 'stop'
-
-        if new_direction != self.current_direction:
-            self.current_direction = new_direction
-            self.evaluate_control_strategy()
-
-        self.update_motor()
-
-    def measure_current_speed(self):
-        # Placeholder - convert encoder counts to actual speed
-        return self.encoder_position / time.monotonic()  # Simplified example
-
-    def ramp_speed(self, target_speed):
-        ramp_rate = 1  # Speed change per step, adjust based on testing
-        ramp_time = 0.05  # Time between ramp steps in seconds, adjust based on testing
-
-        if self.current_speed < target_speed:
-            while self.current_speed < target_speed:
-                self.current_speed += ramp_rate
-                self.current_speed = min(self.current_speed, target_speed)  # Ensure we do not exceed target
-                self.update_motor(self.current_speed)
-                time.sleep(ramp_time)
-        elif self.current_speed > target_speed:
-            while self.current_speed > target_speed:
-                self.current_speed -= ramp_rate
-                self.current_speed = max(self.current_speed, target_speed)  # Ensure we do not go below target
-                self.update_motor(self.current_speed)
-                time.sleep(ramp_time)
+        self.update_motor
 
     def update_motor(self, adjusted_speed):
    #     measured_speed = self.measure_current_speed()
@@ -200,6 +185,14 @@ class MotorControlNode(Node):
         else:
             self.pwm_forward.ChangeDutyCycle(0)
             self.pwm_backward.ChangeDutyCycle(0)
+
+
+    def stop_motor(self):
+        # Stops the motor if the elbow angle is out of the safe range
+        self.pwm_forward.ChangeDutyCycle(0)
+        self.pwm_backward.ChangeDutyCycle(0)
+        print("Motor stopped because elbow angle exceeded limit")
+
 
 def main(args=None):
     rclpy.init(args=args)
