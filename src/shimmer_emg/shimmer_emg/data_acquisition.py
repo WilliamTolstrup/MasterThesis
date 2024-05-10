@@ -12,6 +12,7 @@ from std_msgs.msg import Float32, Bool, Float32MultiArray
 import pandas as pd
 import os
 from collections import deque
+import socket
 
 class ShimmerDataNode(Node):
     def __init__(self):
@@ -38,9 +39,15 @@ class ShimmerDataNode(Node):
 
 
         # Individual calibration
-        self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
-        self.rp_filepath = '/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/calibration.csv' # used on the raspberry pi
-        self.data_file_exists = os.path.isfile(self.data_filepath) or os.path.isfile(self.rp_filepath)
+
+        hostname = socket.gethostname()
+
+        if hostname == 'ubuntu':
+            self.data_filepath = '/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/calibration.csv' # used on the raspberry pi
+        else:
+            self.data_filepath = '/home/william/repos/control_system_ws/src/shimmer_emg/shimmer_emg/calibration.csv'
+            
+        self.data_file_exists = os.path.isfile(self.data_filepath)
 
         # Flags so it works without calibration (to calibrate)
         self.ch1_MinVC   = False
