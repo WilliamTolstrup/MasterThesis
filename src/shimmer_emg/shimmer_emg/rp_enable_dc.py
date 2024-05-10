@@ -6,6 +6,8 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32
 from geometry_msgs.msg import Vector3
 import numpy as np
+import pandas as pd
+
 
 # Motor Driver GPIO Pins
 IN1 = 17  # Example GPIO pin
@@ -13,11 +15,6 @@ IN2 = 27  # Example GPIO pin
 
 CLK = 5
 DT = 6
-
-# Setup
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(IN1, GPIO.OUT)
-GPIO.setup(IN2, GPIO.OUT)
 
 # Load SVM model and scaler
 svm_model = joblib.load('/home/pi/MasterThesis/src/shimmer_emg/shimmer_emg/svm_model.pk1')
@@ -60,11 +57,17 @@ class MotorControlNode(Node):
         self.acc_derivative_subscriber = self.create_subscription(Float32, '/features/AccDerivative', self.acc_derivative_callback, 10)
         self.angle_estimate_subscriber = self.create_subscription(Float32, '/features/angle', self.angle_callback, 10)
 
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(IN1, GPIO.OUT)
+        GPIO.setup(IN2, GPIO.OUT)
+        GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
         # Init struggle detection
         self.struggle_detected = False
         self.last_emg_envelope = 0
         self.last_derivative = 0
-
+        self.target_speed = 0
         # Safe angle limits
         self.min_angle = 0
         self.max_angle = 150
@@ -74,6 +77,7 @@ class MotorControlNode(Node):
         self.pwm_backward = GPIO.PWM(IN2, 1000)  # Initialize PWM on IN2 1000Hz frequency
         self.pwm_forward.start(0)
         self.pwm_backward.start(0)
+        self.current_direction = 'stop'
 
         # Encoder setup
         self.encoder_position = 0
@@ -111,9 +115,14 @@ class MotorControlNode(Node):
             self.target_speed = 50
         else:
             # Normal adaptive speed calculation
-            derivative_effect = np.clip(self.last_derivative * 10, -50, 50)
-            envelope_effect = max(0, 100 - self.last_emg_envelope * 100)
-            self.target_speed = 10 + derivative_effect - envelope_effect
+            derivative_effect = abs(self.last_derivative) * 10
+            print(f"Derivative effect: {derivative_effect}")
+            envelope_effect = self.last_emg_envelope
+            print(f"Envelope effect: {envelope_effect}")
+            self.target_speed = derivative_effect + envelope_effect
+            print(f"Target speed pre-norm: {self.target_speed}")
+            self.target_speed = np.clip(self.target_speed, 0, 100)
+            print(f"Target speed post-norm: {self.target_speed}")
 
         self.update_motor()
 
@@ -129,11 +138,14 @@ class MotorControlNode(Node):
         print("Motor stopped because elbow angle exceeded limit")
 
     def feature_callback(self, feature_msg):
-        features = np.array(feature_msg.data).reshape(1, -1)
-        scaled_features = scaler.transform(features)
-        predicted_state = svm_model.predict(scaled_features)[0]
+        feature_names = ['combined_contraction', 'acc_y_derivative', 'elbow_angle']
+        features_df = pd.DataFrame([feature_msg.data], columns=feature_names)
 
-        # Update motor direction based on SVM state prediction
+        scaled_features = scaler.transform(features_df)
+        predicted_state = svm_model.predict(scaled_features)[0].strip().strip("'\"")
+        print(f"predicted state: {predicted_state}")
+        
+   # Update motor direction based on SVM state prediction
         if predicted_state == 'flexion_heavy_vertical':
             self.current_direction = 'forward'
         elif predicted_state == 'extension_heavy_vertical':
@@ -147,9 +159,12 @@ class MotorControlNode(Node):
         return self.encoder_position / time.monotonic()  # Simplified example
 
     def update_motor(self):
-        measured_speed = self.measure_current_speed()
-        pid_output = self.pid.update(self.target_speed, measured_speed)
-        adjusted_speed = max(0, min(100, abs(pid_output)))
+   #     measured_speed = self.measure_current_speed()
+   #     pid_output = self.pid.update(self.target_speed, measured_speed)
+   #     adjusted_speed = max(0, min(100, abs(pid_output)))
+
+        adjusted_speed = self.target_speed
+        print(f"Adjusted speed: {adjusted_speed}")
 
         # Set motor PWM based on current direction and dynamically adjusted speed
         if self.current_direction == 'forward':
