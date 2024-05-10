@@ -183,6 +183,7 @@ def main(args=None):
     rclpy.spin(motor_control_node)
     motor_control_node.destroy_node()
     rclpy.shutdown()
+    GPIO.cleanup()
 
 if __name__ == '__main__':
     main()
