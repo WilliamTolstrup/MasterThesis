@@ -13,6 +13,7 @@ import pandas as pd
 import os
 from collections import deque
 import socket
+import math
 
 class ShimmerDataNode(Node):
     def __init__(self):
@@ -173,6 +174,8 @@ class ShimmerDataNode(Node):
 
                     #ts, ts_start, ts_current, calibrated_ch1, calibrated_ch2 = raw_data
                     ts, ts_start, ts_current, calibrated_ln_accx, calibrated_ln_accy, calibrated_ln_accz, calibrated_ch1, calibrated_ch2 = raw_data
+                    calibrated_ch1 = calibrated_ch1*3
+                    calibrated_ch2 = calibrated_ch2*3
                     
                     # There is an extra "Status" if using read_emg_acc_packet, or if calibrated=False for _extended. It is unused.
 
@@ -247,6 +250,7 @@ class ShimmerDataNode(Node):
                     # Estimated angle based on accelerometer data (feature)
                     elbow_angle = accelerometer.estimate_angle(acc_y_smooth, min_accel=self.accel_y_min, max_accel=self.accel_y_max)
 
+
                     # Assign accel values
                     ln_accMsg.x = float(calibrated_ln_accx)
                     ln_accMsg.y = float(acc_y_smooth)
@@ -268,7 +272,7 @@ class ShimmerDataNode(Node):
                     ###           Features          ###
                     ###################################
 
-                    features_msg.data = [float(combined_contraction)] + [float(acc_y_derivative)] + [float(elbow_angle)]
+                    features_msg.data = [float(combined_contraction)] + [float(ch1_envelope)] + [float(ch2_envelope)] + [float(acc_y_smooth)] + [float(acc_y_derivative)] + [float(elbow_angle)]
 
                     
                     ###################################
@@ -447,15 +451,9 @@ class AccelerometerMethods:
 
             angle = a * accel_y + b
 
-            # Calculate the proportion of the way accel_y is between min_accel and max_accel
-            #proportion = (accel_y - min_accel) / (max_accel - min_accel)
-
-            # Interpolate this proportion linearly between min_angle and max_angle
-            #angle = min_angle + proportion * (max_angle - min_angle)
             return angle
         else:
             return 0
-
 
 def main(args=None):
     rclpy.init(args=args)

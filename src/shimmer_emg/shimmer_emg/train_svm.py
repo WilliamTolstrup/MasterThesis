@@ -10,13 +10,25 @@ import joblib
 
 
 # Load the dataset
+#df = pd.read_csv('features.csv')
 df = pd.read_csv('features.csv')
 
 
 # Select features and target variable
+# X = df[['combined_contraction',
+#         'acc_y_derivative',
+#         'elbow_angle']]
+
 X = df[['combined_contraction',
+        'ch1_envelope',
+        'ch2_envelope',
+        'acc_y_smooth',
         'acc_y_derivative',
-        'elbow_angle']]
+        'elbow_angle'
+
+
+]]
+
 y = df['state']
 
 # Split the dataset into training and test sets

@@ -156,13 +156,16 @@ class MotorControlNode(Node):
         else:
             # Normal adaptive speed calculation
             derivative_effect = abs(self.last_derivative)
-            print(f"Derivative effect: {derivative_effect}")
             envelope_effect = self.last_emg_envelope
+            self.test_speed1 = derivative_effect + envelope_effect
+            self.test_speed2 = np.clip(self.test_speed1, 0, 10)
+
+            print(f"Derivative effect: {derivative_effect}")
             print(f"Envelope effect: {envelope_effect}")
-            self.target_speed = derivative_effect + envelope_effect
-            print(f"Target speed pre-norm: {self.target_speed}")
-            self.target_speed = np.clip(self.target_speed, 0, 10)
-            print(f"Target speed post-norm: {self.target_speed}")
+            print(f"Target speed pre-norm: {self.test_speed1}")
+            print(f"Target speed post-norm: {self.test_speed2}")
+
+            self.target_speed = 35
 
         self.update_motor
 

@@ -38,7 +38,7 @@ class DataListener(Node):
         self.features_writer = csv.writer(self.features_file)
 
         if not self.features_file_exists:
-            self.features_writer.writerow(['combined_contraction', 'acc_y_derivative', 'elbow_angle', 'state'])
+            self.features_writer.writerow(['combined_contraction', 'ch1_envelope', 'ch2_envelope', 'acc_y_smooth', 'acc_y_derivative', 'elbow_angle', 'state'])
 
 
         self.delay = 1.0
