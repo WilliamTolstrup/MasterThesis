@@ -7,6 +7,7 @@ from std_msgs.msg import Float32MultiArray, Float32
 from geometry_msgs.msg import Vector3
 import numpy as np
 import pandas as pd
+from collections import deque
 
 
 # Motor Driver GPIO Pins
@@ -56,6 +57,7 @@ class MotorControlNode(Node):
         self.emg_envelope_subscriber = self.create_subscription(Vector3, '/emg/emg_envelope', self.emg_envelope_callback, 10)
         self.acc_derivative_subscriber = self.create_subscription(Float32, '/features/AccDerivative', self.acc_derivative_callback, 10)
         self.angle_estimate_subscriber = self.create_subscription(Float32, '/features/angle', self.angle_callback, 10)
+        self.contraction_subscriber = self.create_subscription(Vector3, '/features/contractions', self.contraction_callback, 10)
 
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(IN1, GPIO.OUT)
@@ -71,6 +73,8 @@ class MotorControlNode(Node):
         # Safe angle limits
         self.min_angle = 0
         self.max_angle = 150
+        # Init prediction buffer
+        self.prediction_buffer = deque(maxlen=10)
 
         # Initialize PWM for both IN1 and IN2
         self.pwm_forward = GPIO.PWM(IN1, 1000)  # Initialize PWM on IN1 1000Hz frequency
@@ -87,6 +91,11 @@ class MotorControlNode(Node):
     ##########################
     ###     CALLBACKS      ###
     ##########################
+
+    def contraction_callback(self, msg):
+        self.ch1_contraction = msg.x
+        self.ch2_contraction = msg.y
+        self.combined_contraction = msg.z
 
     def emg_envelope_callback(self, msg):
         average_envelope = (msg.x + msg.y) / 2
@@ -108,12 +117,19 @@ class MotorControlNode(Node):
 
         scaled_features = scaler.transform(features_df)
         predicted_state = svm_model.predict(scaled_features)[0].strip().strip("'\"")
-        print(f"predicted state: {predicted_state}")
+
+        # Add the prediction to the buffer
+        self.prediction_buffer.append(predicted_state)
+
+        # Compute the most frequent prediction in the buffer
+        smoothed_prediction = max(set(self.prediction_buffer), key=self.prediction_buffer.count)
+
+        print(f"predicted state: {smoothed_prediction}")
         
    # Update motor direction based on SVM state prediction
-        if predicted_state == 'flexion_heavy_vertical':
+        if predicted_state == 'flexion' and self.ch1_contraction == True:
             self.current_direction = 'forward'
-        elif predicted_state == 'extension_heavy_vertical':
+        elif predicted_state == 'extension' and self.ch2_contraction == True:
             self.current_direction = 'backward'
         else:
             self.current_direction = 'stop'

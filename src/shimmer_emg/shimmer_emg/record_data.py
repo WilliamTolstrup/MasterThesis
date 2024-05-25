@@ -59,7 +59,7 @@ class DataListener(Node):
         self.derivative_data = [0]
         self.angle_data = [0]
         self.features_data = []
-        self.current_state = 'rest_heavy_vertical'
+        self.current_state = 'rest'
         # Flags
         self.new_timestamp_data = False
         self.new_emg_raw_data = False
@@ -101,12 +101,13 @@ class DataListener(Node):
 
         # Timing and protocol management
         self.start_time = time.time()
-        self.current_state = 'rest_heavy_vertical'
+        self.current_state = 'rest'
         self.state_start_time = self.start_time
         self.protocol = [
-            ('rest_heavy_vertical', 4),      #Change between "heavy - light", and "vertical - horizontal", to get a decent dataset
-            ('flexion_heavy_vertical', 4),
-            ('extension_heavy_vertical', 4),
+            ('rest', 4),
+            ('flexion', 4),
+            ('static hold', 4),
+            ('extension', 4),
         ]
         self.protocol_index = 0
         self.state_transitions = []
@@ -178,11 +179,11 @@ class DataListener(Node):
             self.current_state, _ = self.protocol[self.protocol_index]  # Update to new state
             self.state_start_time = current_time  # Reset state start time
             print(f"Switching to {self.current_state}.")
-            if self.current_state == 'rest_heavy_vertical' or self.current_state == 'rest_light_vertical' or self.current_state == 'rest_heavy_horizontal' or self.current_state == 'rest_light_horizontal':
+            if self.current_state == 'rest':
                 print(self.iteration)
                 self.iteration += 1
 
-                if self.iteration == 51:
+                if self.iteration == 21:
                     print("=========== STOP ===========")
 
     def log_and_save_features(self):

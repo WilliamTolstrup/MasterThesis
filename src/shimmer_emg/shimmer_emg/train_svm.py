@@ -11,7 +11,7 @@ import joblib
 
 # Load the dataset
 #df = pd.read_csv('features.csv')
-df = pd.read_csv('features.csv')
+df = pd.read_csv('data_file.csv')
 
 
 # Select features and target variable
@@ -19,12 +19,14 @@ df = pd.read_csv('features.csv')
 #         'acc_y_derivative',
 #         'elbow_angle']]
 
-X = df[['combined_contraction',
-        'ch1_envelope',
-        'ch2_envelope',
-        'acc_y_smooth',
+X = df[[#'ch1_contraction',
+        #'ch2_contraction',
+        'combined_contraction',
+        'emg_envelope_ch1',
+        'emg_envelope_ch2',
+        #'ln_acc_y',
         'acc_y_derivative',
-        'elbow_angle'
+      #  'elbow_angle'
 
 
 ]]
@@ -42,9 +44,9 @@ X_test_scaled = scaler.transform(X_test)
 joblib.dump(scaler, 'scaler.pk1') # Save scaler
 
 # Define the parameter grid for SVM
-param_grid = {'C': [0.1, 1, 2, 5, 10, 20],
-              'gamma': [1, 0.1, 0.01, 0.001],
-              'kernel': ['linear', 'rbf', 'poly', 'sigmoid']}
+param_grid = {'C': [0.1, 1, 2, 5, 10],
+              'gamma': [0.1, 0.01, 0.001],
+              'kernel': ['linear', 'poly', 'sigmoid']}
 
 # Perform cross-validation and hyperparameter tuning
 svm_grid = GridSearchCV(SVC(), param_grid, cv=5, scoring='accuracy', verbose=1, n_jobs=-1)

@@ -81,7 +81,7 @@ class ShimmerDataNode(Node):
             print("No individual calibration available")
 
         self.ch1_threshold = self.setup_envelope_threshold(self.ch1_MinVC, self.ch1_MVC, 0.12) # k = 0.12 -> 12% above minvc towards mvc
-        self.ch2_threshold = self.setup_envelope_threshold(self.ch2_MinVC, self.ch2_MVC, 0.08) # Same here
+        self.ch2_threshold = self.setup_envelope_threshold(self.ch2_MinVC, self.ch2_MVC, 0.12) # Same here
 
         # Window segmentation related
         self.Fs = 500 # Sampling rate
@@ -226,7 +226,8 @@ class ShimmerDataNode(Node):
                         emg_envelope_msg.y = float((ch2_envelope-self.ch2_MinVC)/(self.ch2_MVC-self.ch2_MinVC))
                         emg_envelope_msg.z = np.clip(emg_envelope_msg.x + emg_envelope_msg.y, 0, 1)
 
-                        print(f"Non-normalized envelope ch1: {ch1_envelope}")
+                        print(f"Ch1 envelope: {emg_envelope_msg.x}")
+                        print(f"Ch2 envelope: {emg_envelope_msg.y}")
                         print(f"Combined envelope: {emg_envelope_msg.z}")
                     else:
                         emg_envelope_msg.x = ch1_envelope
@@ -272,9 +273,9 @@ class ShimmerDataNode(Node):
                     ###           Features          ###
                     ###################################
 
-                    features_msg.data = [float(combined_contraction)] + [float(ch1_envelope)] + [float(ch2_envelope)] + [float(acc_y_smooth)] + [float(acc_y_derivative)] + [float(elbow_angle)]
+                    features_msg.data = [float(combined_contraction)] + [float(ch1_envelope)] + [float(ch2_envelope)] + [float(acc_y_derivative)]#[float(ch1_contraction)] + [float(ch2_contraction)] + [float(ch1_envelope)] + [float(ch2_envelope)] + [float(acc_y_derivative)]
 
-                    
+                    #+ [float(acc_y_smooth)]
                     ###################################
                     ###           Publish           ###
                     ###################################

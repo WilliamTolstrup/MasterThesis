@@ -6,7 +6,7 @@ data = pd.read_csv('data_file.csv')
 
 # Determine unique states for coloring
 unique_states = data['state'].unique()
-state_colors = {'rest_heavy_vertical': 'white', 'flexion_heavy_vertical': 'green', 'extension_heavy_vertical': 'blue'}
+state_colors = {'rest': 'white', 'flexion': 'green', 'extension': 'blue', 'static hold': 'yellow'}
 
 
 # Plotting
