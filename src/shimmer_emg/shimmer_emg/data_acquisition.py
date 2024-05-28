@@ -72,7 +72,7 @@ class ShimmerDataNode(Node):
             print(f"Max Accel Y: {self.accel_y_max}")
             print(f"Min Accel Y: {self.accel_y_min}")
             print(f"Ch1 MVC: {self.ch1_MVC}")
-            print(f"Ch1 MVC: {self.ch2_MVC}")
+            print(f"Ch2 MVC: {self.ch2_MVC}")
             print(f"Ch1 MinVC: {self.ch1_MinVC}")
             print(f"Ch2 MinVC: {self.ch2_MinVC}")
             print("==================================")
@@ -82,6 +82,7 @@ class ShimmerDataNode(Node):
 
         self.ch1_threshold = self.setup_envelope_threshold(self.ch1_MinVC, self.ch1_MVC, 0.12) # k = 0.12 -> 12% above minvc towards mvc
         self.ch2_threshold = self.setup_envelope_threshold(self.ch2_MinVC, self.ch2_MVC, 0.12) # Same here
+        self.combined_threshold = self.setup_envelope_threshold(self.ch1_MinVC, self.ch1_MVC, 0.25) # 25 %
 
         # Window segmentation related
         self.Fs = 500 # Sampling rate
@@ -214,7 +215,7 @@ class ShimmerDataNode(Node):
                     # Check if contraction is above a threshold. Returns True or False
                     ch1_contraction = emg_ch1.detect_activation(ch1_envelope, self.ch1_threshold)
                     ch2_contraction = emg_ch2.detect_activation(ch2_envelope, self.ch2_threshold)
-                    combined_contraction = emg_ch1.detect_activation(combined_envelope, self.ch1_threshold)
+                    combined_contraction = emg_ch1.detect_activation(combined_envelope, self.combined_threshold)
                     
                     # Assign rectified values
                     emg_rectified_msg.x = ch1_rectified
