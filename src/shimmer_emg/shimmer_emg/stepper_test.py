@@ -30,6 +30,7 @@ GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set as input with
 GPIO.output(enable_pin, GPIO.HIGH)
 
 def move_stepper(direction, steps):
+    print(f"Moving {'forward' if direction == GPIO.HIGH else 'backward'} {steps} steps")
     # Set the direction
     GPIO.output(dir_pin, direction)
     # Enable the motor driver
