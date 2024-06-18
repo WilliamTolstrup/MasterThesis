@@ -40,9 +40,10 @@ def button_callback(channel):
     global motor_direction
     if motor_direction == GPIO.HIGH:
         motor_direction = GPIO.LOW
+        rotate_motor(1000, motor_direction)  # Rotate 1000 steps in the toggled direction
     else:
         motor_direction = GPIO.HIGH
-    rotate_motor(1000, motor_direction)  # Rotate 1000 steps in the toggled direction
+        rotate_motor(1000, motor_direction)  # Rotate 1000 steps in the toggled direction
 
 # Add event detection on the button pin
 GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=300)
