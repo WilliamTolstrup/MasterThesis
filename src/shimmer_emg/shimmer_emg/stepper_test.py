@@ -51,7 +51,8 @@ def move_stepper(direction, steps):
 
 def button_callback(channel):
     global current_direction, button_pressed
-    if not button_pressed:
+    # Check if button is actually pressed
+    if not button_pressed and GPIO.input(button_pin) == GPIO.LOW:
         button_pressed = True
         print("Button pressed! Moving stepper motor.")
         # Move the stepper motor in the current direction
@@ -61,13 +62,13 @@ def button_callback(channel):
         current_direction = GPIO.LOW if current_direction == GPIO.HIGH else GPIO.HIGH
 
 # Add event detection on button press
-GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=300)
+GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=200)
 
 try:
     print("Press the button to move the stepper motor...")
     while True:
-        if button_pressed:
-            time.sleep(0.5)  # Debounce delay
+        # Reset button pressed state after release
+        if button_pressed and GPIO.input(button_pin) == GPIO.HIGH:
             button_pressed = False
         time.sleep(0.1)  # Sleep to reduce CPU usage
 except KeyboardInterrupt:
