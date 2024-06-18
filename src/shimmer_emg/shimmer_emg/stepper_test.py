@@ -29,6 +29,9 @@ GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Set as input with p
 # Disable the motor driver to start with
 GPIO.output(enable_pin, GPIO.HIGH)
 
+# Variable to store the button state
+button_pressed = False
+
 def move_stepper(direction, steps):
     print(f"Moving {'forward' if direction == GPIO.HIGH else 'backward'} {steps} steps")
     # Set the direction
@@ -47,20 +50,25 @@ def move_stepper(direction, steps):
     GPIO.output(enable_pin, GPIO.HIGH)
 
 def button_callback(channel):
-    global current_direction
-    print("Button pressed! Moving stepper motor.")
-    # Move the stepper motor in the current direction
-    move_stepper(current_direction, steps)
-    
-    # Toggle the direction for the next button press
-    current_direction = GPIO.LOW if current_direction == GPIO.HIGH else GPIO.HIGH
+    global current_direction, button_pressed
+    if not button_pressed:
+        button_pressed = True
+        print("Button pressed! Moving stepper motor.")
+        # Move the stepper motor in the current direction
+        move_stepper(current_direction, steps)
+        
+        # Toggle the direction for the next button press
+        current_direction = GPIO.LOW if current_direction == GPIO.HIGH else GPIO.HIGH
 
 # Add event detection on button press
-GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=200)
+GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=300)
 
 try:
     print("Press the button to move the stepper motor...")
     while True:
+        if button_pressed:
+            time.sleep(0.5)  # Debounce delay
+            button_pressed = False
         time.sleep(0.1)  # Sleep to reduce CPU usage
 except KeyboardInterrupt:
     print("Exiting program...")
