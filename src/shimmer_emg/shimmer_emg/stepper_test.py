@@ -24,7 +24,7 @@ GPIO.setup(enable_pin, GPIO.OUT)
 GPIO.setup(MS1_pin, GPIO.OUT)
 GPIO.setup(MS2_pin, GPIO.OUT)
 GPIO.setup(MS3_pin, GPIO.OUT)
-GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Set as input with pull-up
+GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set as input with pull-down
 
 # Disable the motor driver to start with
 GPIO.output(enable_pin, GPIO.HIGH)
