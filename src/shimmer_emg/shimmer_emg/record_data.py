@@ -107,7 +107,9 @@ class DataListener(Node):
             ('rest', 4),
             ('flexion', 4),
             ('static hold', 4),
+            ('hand', 2),
             ('extension', 4),
+            ('hand', 2),
         ]
         self.protocol_index = 0
         self.state_transitions = []

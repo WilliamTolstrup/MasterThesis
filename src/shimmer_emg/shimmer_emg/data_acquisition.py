@@ -457,6 +457,7 @@ class AccelerometerMethods:
         else:
             return 0
 
+
 def main(args=None):
     rclpy.init(args=args)
     shimmer_node = ShimmerDataNode()
