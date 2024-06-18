@@ -47,6 +47,7 @@ def move_stepper(direction, steps):
     GPIO.output(enable_pin, GPIO.HIGH)
 
 def button_callback(channel):
+    print("Button pressed!")
     global current_direction
     # Move the stepper motor in the current direction
     move_stepper(current_direction, steps)
