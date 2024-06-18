@@ -21,6 +21,7 @@ GPIO.setup(MS3_pin, GPIO.OUT)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Set as input with pull-up
 
 motor_direction = GPIO.HIGH  # Initial direction
+direction_flag = True  # True means forward, False means backward
 
 # Function to control the motor
 def rotate_motor(steps, direction):
@@ -37,10 +38,11 @@ def rotate_motor(steps, direction):
     GPIO.output(enable_pin, GPIO.HIGH)  # Disable the driver after operation
 
 def button_callback(channel):
-    global motor_direction
+    global motor_direction, direction_flag
     rotate_motor(1000, motor_direction)  # Rotate 1000 steps in the current direction
     # Toggle direction for next button press
-    motor_direction = GPIO.LOW if motor_direction == GPIO.HIGH else GPIO.HIGH
+    direction_flag = not direction_flag
+    motor_direction = GPIO.HIGH if direction_flag else GPIO.LOW
 
 # Add event detection on the button pin
 GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=300)
