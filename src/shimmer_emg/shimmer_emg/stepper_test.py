@@ -13,6 +13,9 @@ button_pin = 16  # GPIO pin connected to the button
 # Step count
 steps = 1000
 
+# Initial direction
+current_direction = GPIO.HIGH  # Start with moving forward
+
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)  # Broadcom pin-numbering scheme
 GPIO.setup(step_pin, GPIO.OUT)
@@ -43,16 +46,15 @@ def move_stepper(direction, steps):
     GPIO.output(enable_pin, GPIO.HIGH)
 
 def button_callback(channel):
-    # Check the button state
-    if GPIO.input(button_pin) == GPIO.LOW:
-        # Move the stepper motor forward 1000 steps
-        move_stepper(GPIO.HIGH, steps)
-    else:
-        # Move the stepper motor backward 1000 steps
-        move_stepper(GPIO.LOW, steps)
+    global current_direction
+    # Move the stepper motor in the current direction
+    move_stepper(current_direction, steps)
+    
+    # Toggle the direction for the next button press
+    current_direction = GPIO.LOW if current_direction == GPIO.HIGH else GPIO.HIGH
 
 # Add event detection on button press
-GPIO.add_event_detect(button_pin, GPIO.BOTH, callback=button_callback, bouncetime=200)
+GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=button_callback, bouncetime=200)
 
 try:
     print("Press the button to move the stepper motor...")
